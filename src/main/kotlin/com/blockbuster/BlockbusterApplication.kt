@@ -7,6 +7,8 @@ import com.blockbuster.db.FlywayManager
 import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.plugin.PluginFactory
 import com.blockbuster.resource.HealthResource
+import com.blockbuster.resource.SearchResource
+import com.blockbuster.resource.StaticResource
 import com.blockbuster.media.SqliteRokuMediaStore
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
@@ -39,7 +41,9 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         fun main(args: Array<String>) {
             println(MASTHEAD)
             println("🚀 Starting NFC Library System...")
+            println("🌐 Web interface: http://localhost:8080/")
             println("📱 NFC Tags will be accessible at: http://localhost:8080/play/{tag-id}")
+            println("🔍 Search API: http://localhost:8080/search/{plugin}")
             println("⚙️  Admin interface available at: http://localhost:8080/admin")
             println("=".repeat(80))
             
@@ -90,7 +94,9 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         val pluginManager = MediaPluginManager(plugins)
 
         // Register resources
+        environment.jersey().register(StaticResource())
         environment.jersey().register(HealthResource(flywayManager))
+        environment.jersey().register(SearchResource(pluginManager))
 
         // Register managed objects for lifecycle management
         environment.lifecycle().manage(object : io.dropwizard.lifecycle.Managed {
@@ -110,11 +116,4 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         println("🔗 JDBC URL: ${configuration.database.jdbcUrl}")
         println("🔌 Plugins loaded: ${plugins.map { it.getPluginName() }}")
     }
-    // private fun setupMetrics(metrics: MetricRegistry) {
-    //     val reporter = ConsoleReporter.forRegistry(metrics)
-    //         .convertRatesTo(TimeUnit.SECONDS)
-    //         .convertDurationsTo(TimeUnit.MILLISECONDS)
-    //         .build()
-    //     reporter.start(30, TimeUnit.SECONDS)
-    // }
 }

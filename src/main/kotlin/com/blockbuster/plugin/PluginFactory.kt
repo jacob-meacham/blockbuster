@@ -25,7 +25,7 @@ class PluginFactory(
     /**
      * Create a plugin based on the plugin definition
      */
-    fun createPlugin(definition: PluginDefinition): MediaPlugin {
+    fun createPlugin(definition: PluginDefinition): MediaPlugin<*> {
         return when (definition.type.lowercase()) {
             "roku" -> createRokuPlugin(definition)
             "spotify" -> createSpotifyPlugin(definition)
@@ -57,7 +57,7 @@ class PluginFactory(
     /**
      * Create a Spotify plugin from configuration (placeholder for future implementation)
      */
-    private fun createSpotifyPlugin(definition: PluginDefinition): MediaPlugin {
+    private fun createSpotifyPlugin(definition: PluginDefinition): MediaPlugin<*> {
         val config = definition.config
 
         val clientId = config["clientId"] as? String

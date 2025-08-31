@@ -19,7 +19,7 @@ class RokuPlugin(
     private val deviceName: String = "Roku Device",
     private val rokuMediaStore: RokuMediaStore,
     private val httpClient: OkHttpClient
-) : MediaPlugin {
+) : MediaPlugin<RokuMediaContent> {
 
     private val logger = LoggerFactory.getLogger(javaClass)
     private val ecpPort = 8060
@@ -28,7 +28,6 @@ class RokuPlugin(
     override fun getPluginName(): String = "roku"
     
     override fun getDescription(): String = "Controls Roku devices via ECP protocol"
-
 
     @Throws(PluginException::class)
     override fun play(contentId: String, options: Map<String, Any>) {
@@ -115,6 +114,103 @@ class RokuPlugin(
         } catch (e: Exception) {
             logger.error("Failed to send ECP request to $urlString: ${e.message}", e)
             throw PluginException("Failed to send ECP request: ${e.message}", e)
+        }
+    }
+
+    @Throws(PluginException::class)
+    override fun search(query: String, options: Map<String, Any>): List<SearchResult<RokuMediaContent>> {
+        try {
+            logger.info("Searching for '$query' on Roku device")
+
+            // For demo purposes, return mock search results
+            // In a real implementation, this would query the Roku device's available channels/content
+            val mockResults = mutableListOf<SearchResult<RokuMediaContent>>()
+
+            // Netflix content
+            if (query.lowercase().contains("matrix") || query.lowercase().contains("movie")) {
+                mockResults.add(
+                    SearchResult(
+                        title = "The Matrix Reloaded",
+                        url = null,
+                        mediaUrl = null,
+                        content = RokuMediaContent(
+                            channelName = "Netflix",
+                            channelId = "12",
+                            ecpCommand = "launch",
+                            contentId = "matrix-reloaded-123",
+                            mediaType = "movie",
+                            title = "The Matrix Reloaded"
+                        )
+                    )
+                )
+            }
+
+            // HBO content
+            if (query.lowercase().contains("game") || query.lowercase().contains("throne")) {
+                mockResults.add(
+                    SearchResult(
+                        title = "Game of Thrones - Winter is Coming",
+                        url = null,
+                        mediaUrl = null,
+                        content = RokuMediaContent(
+                            channelName = "HBO Max",
+                            channelId = "61322",
+                            ecpCommand = "launch",
+                            contentId = "game-of-thrones-s01e01",
+                            mediaType = "episode",
+                            title = "Game of Thrones - Winter is Coming"
+                        )
+                    )
+                )
+            }
+
+            // Amazon Prime content
+            if (query.lowercase().contains("rings") || query.lowercase().contains("lord")) {
+                mockResults.add(
+                    SearchResult(
+                        title = "The Lord of the Rings: The Fellowship of the Ring",
+                        url = null,
+                        mediaUrl = null,
+                        content = RokuMediaContent(
+                            channelName = "Amazon Prime Video",
+                            channelId = "13",
+                            ecpCommand = "launch",
+                            contentId = "lotr-fellowship-456",
+                            mediaType = "movie",
+                            title = "The Lord of the Rings: The Fellowship of the Ring"
+                        )
+                    )
+                )
+            }
+
+            // Disney+ content
+            if (query.lowercase().contains("marvel") || query.lowercase().contains("avengers")) {
+                mockResults.add(
+                    SearchResult(
+                        title = "Avengers: Endgame",
+                        url = null,
+                        mediaUrl = null,
+                        content = RokuMediaContent(
+                            channelName = "Disney+",
+                            channelId = "291097",
+                            ecpCommand = "launch",
+                            contentId = "avengers-endgame-789",
+                            mediaType = "movie",
+                            title = "Avengers: Endgame"
+                        )
+                    )
+                )
+            }
+
+            // Filter results based on query if it's more specific
+            val filteredResults = mockResults.take(5) // Return first 5 results for general queries
+
+            logger.info("Found ${filteredResults.size} search results for query '$query'")
+            return filteredResults
+
+        } catch (e: Exception) {
+            logger.error("Search failed for query '$query': ${e.message}", e)
+            throw PluginException("Search failed: ${e.message}", e)
         }
     }
 }

@@ -55,10 +55,25 @@ roku_media (
 - **Health Monitoring**: Basic health check endpoint for system status
 
 ### Roku Plugin
-- **ECP Protocol**: Full Roku External Control Protocol implementation
+- **ECP Protocol**: Full Roku External Control Protocol implementation with device configuration
 - **Content Storage**: SQLite-based media content registry
+- **Search Functionality**: Mock search implementation with popular streaming content
+- **Metadata-Driven**: Uses flexible metadata system for Roku-specific fields (channelName, channelId, mediaType)
 - **Device Configuration**: Configurable device IP and naming
 - **Error Handling**: Comprehensive exception handling with PluginException
+
+### Web Interface
+- **Search Frontend**: Beautiful HTML interface for searching media content
+- **Plugin Selection**: Dropdown to select which plugin to search with
+- **Results Display**: Card-based layout showing search results with metadata
+- **Add to Library**: Buttons to add content to the NFC tag library
+- **Responsive Design**: Mobile-friendly interface with modern styling
+
+### REST API
+- **Search Endpoints**: `/search/{pluginName}?q={query}` for content searching
+- **Plugin List**: `/search/plugins` to get available plugins
+- **Health Check**: `/health` for system status
+- **Static Files**: `/` serves the web interface
 
 ### Configuration System
 - **YAML Configuration**: Single config file for all settings
@@ -70,6 +85,92 @@ roku_media (
 - **Plugin Factory Tests**: Plugin creation and configuration validation
 - **Database Tests**: SQLite integration and migration testing
 - **Integration Tests**: Full system integration testing
+
+## 🚀 Getting Started
+
+### Starting the Application
+```bash
+./gradlew build
+./gradlew run --args="server config.yml"
+```
+
+### Accessing the Web Interface
+- **Main Interface**: http://localhost:8080/
+- **Search API**: http://localhost:8080/search/roku?q=matrix
+- **Plugin List**: http://localhost:8080/search/plugins
+- **Health Check**: http://localhost:8080/health
+
+### Example API Usage
+```bash
+# Search for content
+curl "http://localhost:8080/search/roku?q=matrix"
+
+# Get available plugins
+curl "http://localhost:8080/search/plugins"
+
+# Health check
+curl "http://localhost:8080/health"
+```
+
+### Configuration
+Edit `config.yml` to modify:
+- Database settings
+- Plugin configurations
+- Server ports
+
+Example search queries:
+- "matrix" - Returns The Matrix Reloaded
+- "game" or "throne" - Returns Game of Thrones
+- "rings" or "lord" - Returns Lord of the Rings
+- "marvel" or "avengers" - Returns Avengers: Endgame
+
+## 🔧 Plugin Architecture
+
+### Flexible Search Results
+The `SearchResult` class uses a flexible metadata system to accommodate different plugin requirements:
+
+```kotlin
+data class SearchResult(
+    val contentId: String,           // Unique identifier for the content
+    val title: String,               // Human-readable title
+    val description: String? = null, // Optional description/summary
+    val thumbnailUrl: String? = null,// Optional thumbnail/preview image
+    val year: Int? = null,           // Optional release year
+    val metadata: Map<String, Any> = emptyMap() // Plugin-specific additional data
+)
+```
+
+### Plugin-Specific Metadata Examples
+
+**Roku Plugin:**
+```kotlin
+metadata = mapOf(
+    "channelName" to "Netflix",
+    "channelId" to "12",
+    "mediaType" to "movie"
+)
+```
+
+**Spotify Plugin (hypothetical):**
+```kotlin
+metadata = mapOf(
+    "artist" to "The Beatles",
+    "album" to "Abbey Road",
+    "duration" to 289,  // seconds
+    "trackNumber" to 1
+)
+```
+
+**Emby Plugin (hypothetical):**
+```kotlin
+metadata = mapOf(
+    "serverId" to "emby-server-123",
+    "libraryId" to "movies",
+    "itemType" to "Movie"
+)
+```
+
+This design allows each plugin to store its specific requirements in the metadata field while maintaining a consistent interface across all plugins.
 
 ### 1.1 NFC Infrastructure
 - [ ] **Phone-Based NFC**: Use NFC support on modern phones

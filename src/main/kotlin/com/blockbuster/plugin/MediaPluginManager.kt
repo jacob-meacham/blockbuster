@@ -6,10 +6,10 @@ import org.slf4j.LoggerFactory
  * Manager for media plugins. Maintains a registry of plugins by name
  * and provides methods to interact with them.
  */
-class MediaPluginManager(private val plugins: List<MediaPlugin>) {
+class MediaPluginManager(private val plugins: List<MediaPlugin<*>>) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
-    private val pluginRegistry: Map<String, MediaPlugin>
+    private val pluginRegistry: Map<String, MediaPlugin<*>>
 
     init {
         pluginRegistry = plugins.associateBy { it.getPluginName() }
@@ -19,12 +19,12 @@ class MediaPluginManager(private val plugins: List<MediaPlugin>) {
     /**
      * Get a plugin by name
      */
-    fun getPlugin(name: String): MediaPlugin? = pluginRegistry[name]
+    fun getPlugin(name: String): MediaPlugin<*>? = pluginRegistry[name]
 
     /**
      * Get all registered plugins
      */
-    fun getAllPlugins(): List<MediaPlugin> = plugins
+    fun getAllPlugins(): List<MediaPlugin<*>> = plugins
 
 
 

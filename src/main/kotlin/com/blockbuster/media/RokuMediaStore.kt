@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory
 import javax.sql.DataSource
 
 data class RokuMediaContent(
+    val channelName: String? = null,
     val channelId: String,
     val ecpCommand: String = "launch",
     val contentId: String,
@@ -40,7 +41,7 @@ class SqliteRokuMediaStore(
     
     override fun getMediaContent(uuid: String): RokuMediaContent? {
         val sql = """
-            SELECT uuid, channel_id, ecp_command, content_id, media_type, title, created_at, updated_at
+            SELECT uuid, channel_id, ecp_command, content_id, media_type, title, channel_name, created_at, updated_at
             FROM roku_media 
             WHERE uuid = ?
         """.trimIndent()
@@ -79,7 +80,7 @@ class SqliteRokuMediaStore(
                     // Update existing record
                     val updateSql = """
                         UPDATE roku_media 
-                        SET channel_id = ?, ecp_command = ?, content_id = ?, media_type = ?, title = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
+                        SET channel_id = ?, ecp_command = ?, content_id = ?, media_type = ?, title = ?, channel_name = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
                         WHERE uuid = ?
                     """.trimIndent()
                     
@@ -89,7 +90,8 @@ class SqliteRokuMediaStore(
                         stmt.setString(3, content.contentId)
                         stmt.setString(4, content.mediaType)
                         stmt.setString(5, content.title)
-                        stmt.setString(6, uuid)
+                        stmt.setString(6, content.channelName)
+                        stmt.setString(7, uuid)
                         
                         stmt.executeUpdate()
                         logger.debug("Updated media content for UUID: $uuid")
@@ -98,8 +100,8 @@ class SqliteRokuMediaStore(
                     // Insert new record
                     val insertSql = """
                         INSERT INTO roku_media 
-                        (uuid, channel_id, ecp_command, content_id, media_type, title)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        (uuid, channel_id, ecp_command, content_id, media_type, title, channel_name)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
                     """.trimIndent()
                     
                     connection.prepareStatement(insertSql).use { stmt ->
@@ -109,6 +111,7 @@ class SqliteRokuMediaStore(
                         stmt.setString(4, content.contentId)
                         stmt.setString(5, content.mediaType)
                         stmt.setString(6, content.title)
+                        stmt.setString(7, content.channelName)
                         
                         stmt.executeUpdate()
                         logger.debug("Inserted new media content for UUID: $uuid")
@@ -153,6 +156,7 @@ class SqliteRokuMediaStore(
         logger.debug("Parsed timestamps - created_at: $createdAt, updated_at: $updatedAt")
         
         return RokuMediaContent(
+            channelName = rs.getString("channel_name"),
             channelId = rs.getString("channel_id"),
             ecpCommand = rs.getString("ecp_command") ?: "launch",
             contentId = rs.getString("content_id"),
