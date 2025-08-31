@@ -1,0 +1,27 @@
+database:
+  type: "sqlite"
+  jdbcUrl: "jdbc:sqlite:blockbuster.db"
+  driverClass: "org.sqlite.JDBC"
+
+plugins:
+  configFile: "plugins.yml"
+  enabled:
+    - type: "roku"
+      config:
+        deviceIp: "192.168.1.100"
+        deviceName: "Living Room Roku"
+    # Example of how to add more plugins:
+    # - type: "spotify"
+    #   config:
+    #     clientId: "your-spotify-client-id"
+    #     clientSecret: "your-spotify-client-secret"
+
+server:
+  port: 8080
+  adminPort: 8081
+
+logging:
+  level: INFO
+  appenders:
+    - type: console
+      target: stdout
