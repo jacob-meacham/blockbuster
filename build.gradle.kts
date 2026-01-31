@@ -87,3 +87,15 @@ tasks.shadowJar {
     archiveClassifier.set("")
     mergeServiceFiles()
 }
+
+tasks.register<JavaExec>("run") {
+    group = "application"
+    description = "Run the Blockbuster application"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("com.blockbuster.BlockbusterApplicationKt")
+
+    // Pass through command line arguments via -Pargs="..."
+    if (project.hasProperty("args")) {
+        args(project.property("args").toString().split(" "))
+    }
+}

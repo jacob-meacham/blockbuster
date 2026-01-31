@@ -84,7 +84,11 @@ class RokuPlugin(
 
             when (action) {
                 is RokuAction.Launch -> {
-                    val url = "http://$deviceIp:8060/launch/${action.channelId}"
+                    val url = if (action.params.isNotEmpty()) {
+                        "http://$deviceIp:8060/launch/${action.channelId}?${action.params}"
+                    } else {
+                        "http://$deviceIp:8060/launch/${action.channelId}"
+                    }
                     sendEcpRequest(url, "POST")
                 }
                 is RokuAction.Press -> {
@@ -199,17 +203,15 @@ class RokuPlugin(
 
             channelPlugins.values.forEach { channelPlugin ->
                 val results = channelPlugin.search(query)
-                if (results != null) {
-                    logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
-                    allResults.addAll(results.map { content ->
-                        SearchResult(
-                            title = content.title ?: "Unknown",
-                            url = null,
-                            mediaUrl = null,
-                            content = content
-                        )
-                    })
-                }
+                logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
+                allResults.addAll(results.map { content ->
+                    SearchResult(
+                        title = content.title ?: "Unknown",
+                        url = null,
+                        mediaUrl = null,
+                        content = content
+                    )
+                })
             }
 
             logger.info("Found {} total search results for query '$query'", allResults.size)

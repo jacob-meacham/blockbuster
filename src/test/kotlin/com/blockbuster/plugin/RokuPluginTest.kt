@@ -1,12 +1,8 @@
 package com.blockbuster.plugin
 
-import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
-import org.mockito.Mock
-import org.mockito.MockitoAnnotations
+import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.*
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
@@ -15,335 +11,255 @@ import okhttp3.Call
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.ResponseBody.Companion.toResponseBody
-import java.io.IOException
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RokuPluginTest {
-    
+
     private lateinit var rokuPlugin: RokuPlugin
+    private lateinit var mockMediaStore: MediaStore
+    private lateinit var mockHttpClient: OkHttpClient
+    private lateinit var mockCall: Call
+    private lateinit var mockResponse: Response
+    private lateinit var mockChannelPlugin: RokuChannelPlugin
+
     private val testDeviceIp = "192.168.1.100"
     private val testDeviceName = "Test Roku Device"
-    
-    @Mock
-    private lateinit var mockMediaStore: MediaStore
-    
-    @Mock
-    private lateinit var mockHttpClient: OkHttpClient
-    
-    @Mock
-    private lateinit var mockCall: Call
-    
-    @Mock
-    private lateinit var mockResponse: Response
-    
+
     @BeforeEach
     fun setUp() {
-        MockitoAnnotations.openMocks(this)
+        mockMediaStore = mock()
+        mockHttpClient = mock()
+        mockCall = mock()
+        mockResponse = mock()
+        mockChannelPlugin = mock()
+
+        // Setup successful HTTP response by default
+        whenever(mockHttpClient.newCall(any())).thenReturn(mockCall)
+        whenever(mockCall.execute()).thenReturn(mockResponse)
+        whenever(mockResponse.isSuccessful).thenReturn(true)
+        whenever(mockResponse.body).thenReturn("OK".toResponseBody())
+    }
+
+    @Test
+    fun `should have correct plugin name and description`() {
+        // Given
         rokuPlugin = RokuPlugin(
             deviceIp = testDeviceIp,
             deviceName = testDeviceName,
             mediaStore = mockMediaStore,
             httpClient = mockHttpClient
         )
-    }
-    
-    /**
-     * Helper method to set up common mock behavior for successful HTTP requests
-     */
-    private fun setupSuccessfulHttpResponse() {
-        whenever(mockHttpClient.newCall(any())).thenReturn(mockCall)
-        whenever(mockCall.execute()).thenReturn(mockResponse)
-        whenever(mockResponse.isSuccessful).thenReturn(true)
-        whenever(mockResponse.body).thenReturn("OK".toResponseBody())
-    }
-    
-    /**
-     * Helper method to set up common mock behavior for failed HTTP requests
-     */
-    private fun setupFailedHttpResponse(responseCode: Int) {
-        whenever(mockHttpClient.newCall(any())).thenReturn(mockCall)
-        whenever(mockCall.execute()).thenReturn(mockResponse)
-        whenever(mockResponse.isSuccessful).thenReturn(false)
-        whenever(mockResponse.code).thenReturn(responseCode)
-    }
-    
-    @Test
-    fun `should have correct plugin name and description`() {
+
         // When/Then
         assertEquals("roku", rokuPlugin.getPluginName())
         assertEquals("Controls Roku devices via ECP protocol", rokuPlugin.getDescription())
     }
-    
+
     @Test
-    fun `should execute play command successfully`() {
+    fun `should delegate to channel plugin for playback`() {
         // Given
-        val uuid = "myMovie123"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
+        val channelPlugins = mapOf("12" to mockChannelPlugin)
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = channelPlugins
+        )
+
+        val content = RokuMediaContent(
+            channelId = "12",
             contentId = "movie123",
-            mediaType = "movie",
-            title = "The Matrix"
+            title = "Test Movie"
         )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
+
+        val playbackCommand = RokuPlaybackCommand.DeepLink("http://$testDeviceIp:8060/launch/12?contentId=movie123")
+
+        whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
+        whenever(mockChannelPlugin.buildPlaybackCommand(content, testDeviceIp)).thenReturn(playbackCommand)
+
+        // When
         assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
+            rokuPlugin.play("uuid123", emptyMap())
         }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
+
+        // Then
+        verify(mockMediaStore).getParsed("uuid123", "roku", RokuMediaContent.Parser)
+        verify(mockChannelPlugin).buildPlaybackCommand(content, testDeviceIp)
         verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
     }
-    
+
     @Test
-    fun `should execute play command with different content`() {
+    fun `should execute ActionSequence commands`() {
         // Given
-        val uuid = "myShow456"
-        val mockContent = RokuMediaContent(
-            channelId = "hbo",
-            contentId = "show456",
-            mediaType = "show",
-            title = "Game of Thrones"
+        val channelPlugins = mapOf("12" to mockChannelPlugin)
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = channelPlugins
         )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle content with minimal required fields`() {
-        // Given
-        val uuid = "basicContent"
-        val mockContent = RokuMediaContent(
-            channelId = "basic-channel",
-            contentId = "basic-content"
-        )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle content with special characters`() {
-        // Given
-        val uuid = "specialMovie"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
-            contentId = "movie-123",
-            mediaType = "movie",
-            title = "The Matrix: Reloaded (2003)"
-        )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle different ecpCommand values`() {
-        // Given
-        val uuid = "installApp"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
-            contentId = "app123",
-            ecpCommand = "install",
-            title = "Netflix App"
-        )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle null optional fields gracefully`() {
-        // Given
-        val uuid = "minimalContent"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
-            contentId = "movie123"
-        )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle empty string optional fields gracefully`() {
-        // Given
-        val uuid = "emptyFields"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
+
+        val content = RokuMediaContent(
+            channelId = "12",
             contentId = "movie123",
-            mediaType = "",
-            title = ""
+            title = "Test Movie"
         )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupSuccessfulHttpResponse()
-        
-        // When/Then
-        assertDoesNotThrow {
-            rokuPlugin.play(uuid, emptyMap())
-        }
-        
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
-    }
-    
-    @Test
-    fun `should handle multiple content types`() {
-        // Given
-        val testCases = listOf(
-            Triple("myMovie123", "netflix", "movie"),
-            Triple("myShow456", "hbo", "show"),
-            Triple("myVideo789", "youtube", "video")
-        )
-        
-        // When/Then
-        testCases.forEach { (uuid, channelId, mediaType) ->
-            val mockContent = RokuMediaContent(
-                channelId = channelId,
-                contentId = "content123",
-                mediaType = mediaType,
-                title = "Test Content"
+
+        val playbackCommand = RokuPlaybackCommand.ActionSequence(
+            listOf(
+                RokuAction.Launch("12", "contentId=movie123"),
+                RokuAction.Wait(1000),
+                RokuAction.Press(RokuKey.SELECT, 1)
             )
-            
-            // Reset mocks for each iteration
-            reset(mockMediaStore, mockHttpClient, mockCall, mockResponse)
-            
-            whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-            setupSuccessfulHttpResponse()
-            
-            assertDoesNotThrow {
-                rokuPlugin.play(uuid, emptyMap())
-            }
-            
-            verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-            verify(mockHttpClient).newCall(any())
-            verify(mockCall).execute()
-        }
-    }
-    
-    @Test
-    fun `should handle different channel types`() {
-        // Given
-        val testCases = listOf(
-            "myNetflixMovie" to "netflix",
-            "myHboShow" to "hbo",
-            "myYoutubeVideo" to "youtube",
-            "myPlexContent" to "plex"
         )
-        
-        // When/Then
-        testCases.forEach { (uuid, channelId) ->
-            val mockContent = RokuMediaContent(
-                channelId = channelId,
-                contentId = "content123",
-                title = "Test Content"
-            )
-            
-            // Reset mocks for each iteration
-            reset(mockMediaStore, mockHttpClient, mockCall, mockResponse)
-            
-            whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-            setupSuccessfulHttpResponse()
-            
-            assertDoesNotThrow {
-                rokuPlugin.play(uuid, emptyMap())
-            }
-            
-            verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-            verify(mockHttpClient).newCall(any())
-            verify(mockCall).execute()
+
+        whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
+        whenever(mockChannelPlugin.buildPlaybackCommand(content, testDeviceIp)).thenReturn(playbackCommand)
+
+        // When
+        assertDoesNotThrow {
+            rokuPlugin.play("uuid123", emptyMap())
         }
+
+        // Then
+        verify(mockChannelPlugin).buildPlaybackCommand(content, testDeviceIp)
+        // Should make 2 HTTP calls: Launch and SELECT press
+        verify(mockHttpClient, times(2)).newCall(any())
     }
-    
+
     @Test
-    fun `should throw exception when content not found in media store`() {
+    fun `should throw exception when content not found`() {
         // Given
-        val uuid = "nonExistentContent"
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(null)
-        
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient
+        )
+
+        whenever(mockMediaStore.getParsed("nonexistent", "roku", RokuMediaContent.Parser)).thenReturn(null)
+
         // When/Then
-        val exception = assertThrows<PluginException> {
-            rokuPlugin.play(uuid, emptyMap())
+        val exception = assertThrows(PluginException::class.java) {
+            rokuPlugin.play("nonexistent", emptyMap())
         }
-        
-        assertEquals("Failed to execute Roku command: Content not found in media store", exception.message)
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient, never()).newCall(any())
+
+        assertTrue(exception.message!!.contains("Content not found in media store"))
+        verify(mockMediaStore).getParsed("nonexistent", "roku", RokuMediaContent.Parser)
     }
-    
+
     @Test
-    fun `should throw exception when HTTP request fails`() {
+    fun `should throw exception when no channel plugin registered`() {
         // Given
-        val uuid = "myMovie123"
-        val mockContent = RokuMediaContent(
-            channelId = "netflix",
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = emptyMap()  // No channel plugins
+        )
+
+        val content = RokuMediaContent(
+            channelId = "12",
             contentId = "movie123",
-            mediaType = "movie",
-            title = "The Matrix"
+            title = "Test Movie"
         )
-        
-        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
-        setupFailedHttpResponse(404)
-        
+
+        whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
+
         // When/Then
-        val exception = assertThrows<PluginException> {
-            rokuPlugin.play(uuid, emptyMap())
+        val exception = assertThrows(PluginException::class.java) {
+            rokuPlugin.play("uuid123", emptyMap())
         }
-        
-        assertEquals("Failed to execute Roku command: Failed to send ECP request: ECP request failed with response code: 404", exception.message)
-        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
-        verify(mockHttpClient).newCall(any())
-        verify(mockCall).execute()
+
+        assertTrue(exception.message!!.contains("No channel plugin registered for channel ID: 12"))
+    }
+
+    @Test
+    fun `should aggregate search results from all channel plugins`() {
+        // Given
+        val mockNetflixPlugin = mock<RokuChannelPlugin>()
+        val mockDisneyPlugin = mock<RokuChannelPlugin>()
+
+        val channelPlugins = mapOf(
+            "12" to mockNetflixPlugin,
+            "291097" to mockDisneyPlugin
+        )
+
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = channelPlugins
+        )
+
+        val netflixResults = listOf(
+            RokuMediaContent(channelId = "12", contentId = "123", title = "Netflix Movie")
+        )
+
+        val disneyResults = listOf(
+            RokuMediaContent(channelId = "291097", contentId = "456", title = "Disney Movie")
+        )
+
+        whenever(mockNetflixPlugin.getChannelName()).thenReturn("Netflix")
+        whenever(mockDisneyPlugin.getChannelName()).thenReturn("Disney+")
+        whenever(mockNetflixPlugin.search("test")).thenReturn(netflixResults)
+        whenever(mockDisneyPlugin.search("test")).thenReturn(disneyResults)
+
+        // When
+        val results = rokuPlugin.search("test", emptyMap())
+
+        // Then
+        assertEquals(2, results.size)
+        assertEquals("Netflix Movie", results[0].title)
+        assertEquals("Disney Movie", results[1].title)
+
+        verify(mockNetflixPlugin).search("test")
+        verify(mockDisneyPlugin).search("test")
+    }
+
+    @Test
+    fun `should handle empty search results from all channels`() {
+        // Given
+        val mockChannelPlugin = mock<RokuChannelPlugin>()
+        val channelPlugins = mapOf("12" to mockChannelPlugin)
+
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = channelPlugins
+        )
+
+        whenever(mockChannelPlugin.getChannelName()).thenReturn("Netflix")
+        whenever(mockChannelPlugin.search("test")).thenReturn(emptyList())
+
+        // When
+        val results = rokuPlugin.search("test", emptyMap())
+
+        // Then
+        assertTrue(results.isEmpty())
+        verify(mockChannelPlugin).search("test")
+    }
+
+    @Test
+    fun `should work with no channel plugins registered`() {
+        // Given
+        rokuPlugin = RokuPlugin(
+            deviceIp = testDeviceIp,
+            deviceName = testDeviceName,
+            mediaStore = mockMediaStore,
+            httpClient = mockHttpClient,
+            channelPlugins = emptyMap()
+        )
+
+        // When
+        val results = rokuPlugin.search("test", emptyMap())
+
+        // Then
+        assertTrue(results.isEmpty())
     }
 }

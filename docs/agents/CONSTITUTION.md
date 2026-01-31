@@ -8,6 +8,26 @@ This document establishes the engineering standards, patterns, and principles th
 
 ## Core Principles
 
+This document is non-negotiable. It defines:
+- Code quality standards (simplicity, type safety, error handling)
+- Architectural patterns (plugin system, sealed classes, value types)
+- Testing requirements (unit tests required for all new code)
+- Documentation standards (KDoc for public APIs)
+
+Key principles:
+- **Simplicity over cleverness** - Write obvious code
+- **Type safety** - Use sealed classes, avoid `!!` and `Any`
+- **Fail-fast** - Throw exceptions early, don't hide errors
+- **Test everything** - Unit tests are required, not optional
+
+### Code Style
+
+- **Kotlin**: Idiomatic Kotlin with strict null safety
+- **No `!!` operators**: Use safe calls (`?.`) or proper null checks
+- **Sealed classes**: Use for representing state and commands
+- **Data classes**: For immutable value objects
+- **Explicit over implicit**: Avoid DSLs and operator overloading
+
 ### 1. Simplicity Over Cleverness
 
 **Write code for humans, not compilers.**

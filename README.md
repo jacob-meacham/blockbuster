@@ -10,12 +10,6 @@ This assumes that we will need the Roku API as well as Spotify. This can also as
 - **Stateless Operation**: No complex state management required
 - **Fail-Fast**: System stops if plugins fail to start
 
-### System Components
-1. ✅ **Web Service**: Handles NFC resolution and admin interface (Dropwizard + Jersey)
-2. ✅ **Plugin System**: Simple `play(contentId, options)` interface with factory pattern
-3. ✅ **Content Registry**: SQLite database mapping tags to content with Flyway migrations
-4. ✅ **Configuration**: Single YAML file for all plugin settings
-
 ### Data Flow
 ```
 NFC Tag (URL) → Web Service → Content Lookup → Plugin Call → Media Playback
@@ -32,66 +26,34 @@ interface MediaPlugin {
 }
 ```
 
-### Database Schema
-```sql
-roku_media (
-    uuid TEXT PRIMARY KEY,
-    channel_id TEXT NOT NULL,
-    ecp_command TEXT DEFAULT 'launch',
-    content_id TEXT NOT NULL,
-    media_type TEXT,
-    title TEXT,
-    created_at TIMESTAMP DEFAULT (datetime('now')),
-    updated_at TIMESTAMP DEFAULT (datetime('now'))
-)
-```
+## 📚 Documentation
 
-## ✅ Completed Implementation
+### For Claude Agents
+- **[CLAUDE.md](CLAUDE.md)** - Quick start guide for AI agents working on this project
 
-### Core System
-- **Dropwizard Application**: RESTful web service with Jersey endpoints
-- **Plugin Architecture**: Factory-based plugin system with YAML configuration
-- **Database Integration**: SQLite with Flyway migrations and proper schema
-- **Health Monitoring**: Basic health check endpoint for system status
+### Engineering Standards
+- **[Constitution](docs/agents/CONSTITUTION.md)** - Code quality standards and development principles (REQUIRED READING)
 
-### Roku Plugin
-- **ECP Protocol**: Full Roku External Control Protocol implementation with device configuration
-- **Content Storage**: SQLite-based media content registry
-- **Search Functionality**: Mock search implementation with popular streaming content
-- **Metadata-Driven**: Uses flexible metadata system for Roku-specific fields (channelName, channelId, mediaType)
-- **Device Configuration**: Configurable device IP and naming
-- **Error Handling**: Comprehensive exception handling with PluginException
+### Specifications
+- **[Implementation Strategy](docs/specs/IMPLEMENTATION_STRATEGY.md)** - Overall plan and architecture approach
+- **[System Specifications](docs/specs/SPECIFICATIONS.md)** - Deep technical specifications for each feature
 
-### Web Interface
-- **Search Frontend**: Beautiful HTML interface for searching media content
-- **Plugin Selection**: Dropdown to select which plugin to search with
-- **Results Display**: Card-based layout showing search results with metadata
-- **Add to Library**: Buttons to add content to the NFC tag library
-- **Responsive Design**: Mobile-friendly interface with modern styling
-
-### REST API
-- **Search Endpoints**: `/search/{pluginName}?q={query}` for content searching
-- **Plugin List**: `/search/plugins` to get available plugins
-- **Health Check**: `/health` for system status
-- **Static Files**: `/` serves the web interface
-
-### Configuration System
-- **YAML Configuration**: Single config file for all settings
-- **Plugin Management**: Dynamic plugin loading and configuration
-- **Database Settings**: Configurable JDBC URLs and connection properties
-
-### Testing
-- **Unit Tests**: Comprehensive test coverage for all components
-- **Plugin Factory Tests**: Plugin creation and configuration validation
-- **Database Tests**: SQLite integration and migration testing
-- **Integration Tests**: Full system integration testing
+### Roku Deep Linking
+- **[Channel Deep Linking Discovery](docs/CHANNEL_DEEP_LINKING_DISCOVERY.md)** - Deep linking test results for all streaming services
 
 ## 🚀 Getting Started
 
 ### Starting the Application
+
+**Development Mode** (faster iteration, no JAR rebuild):
+```bash
+./gradlew run -Pargs="server config.yml"
+```
+
+**Production Mode** (using packaged JAR):
 ```bash
 ./gradlew build
-./gradlew run --args="server config.yml"
+java -jar build/libs/blockbuster-1.0.0-SNAPSHOT.jar server config.yml
 ```
 
 ### Accessing the Web Interface

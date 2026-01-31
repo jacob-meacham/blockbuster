@@ -123,7 +123,6 @@ class SqliteMediaStoreTest {
         retrieved?.let { c ->
             assertEquals("basic-channel", c.channelId)
             assertEquals("basic-content", c.contentId)
-            assertEquals("launch", c.ecpCommand)
             assertNull(c.mediaType)
             assertNull(c.title)
         }

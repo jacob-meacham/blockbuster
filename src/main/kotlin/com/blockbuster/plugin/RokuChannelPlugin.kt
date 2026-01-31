@@ -27,10 +27,14 @@ interface RokuChannelPlugin {
     fun buildPlaybackCommand(content: RokuMediaContent, rokuDeviceIp: String): RokuPlaybackCommand
 
     /**
-     * Optional: Search support for this channel
-     * Returns null if channel doesn't support search
+     * Search for content on this channel.
+     *
+     * Channels with API access return actual search results.
+     * Channels without API access return manual search instructions.
+     *
+     * Never returns null - always provides either results or instructions.
      */
-    fun search(query: String): List<RokuMediaContent>? = null
+    fun search(query: String): List<RokuMediaContent> = emptyList()
 }
 
 /**
@@ -54,7 +58,7 @@ sealed class RokuPlaybackCommand {
  * Roku action for programmatic UI navigation
  */
 sealed class RokuAction {
-    data class Launch(val channelId: String) : RokuAction()
+    data class Launch(val channelId: String, val params: String = "") : RokuAction()
     data class Press(val key: RokuKey, val count: Int = 1) : RokuAction()
     data class Type(val text: String) : RokuAction()
     data class Wait(val milliseconds: Long) : RokuAction()

@@ -774,7 +774,7 @@ java -jar build/libs/blockbuster-1.0-SNAPSHOT.jar server config.yml
 
 ## Future Enhancements
 
-### Phase 1: Emby Integration (HIGH PRIORITY)
+### Phase 1: Emby Integration
 - ✅ Deep link discovery completed (Command=PlayNow&ItemIds)
 - Implement EmbyPlugin with validated deep linking
 - Search, library browsing, playback control

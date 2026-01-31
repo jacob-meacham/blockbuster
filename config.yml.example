@@ -10,6 +10,32 @@ plugins:
       config:
         deviceIp: "192.168.1.100"
         deviceName: "Living Room Roku"
+        # Configure Roku channel plugins
+        channels:
+          # Emby - requires API access for search
+          - type: "emby"
+            enabled: true
+            config:
+              serverUrl: "https://emby.example.com"
+              apiKey: "your-emby-api-key"
+              userId: "your-emby-user-id"
+
+          # Disney+ - no API, returns manual search instructions
+          - type: "disney+"
+            enabled: true
+
+          # Netflix - no API, returns manual search instructions
+          - type: "netflix"
+            enabled: true
+
+          # HBO Max - no API, returns manual search instructions
+          - type: "hbomax"
+            enabled: true
+
+          # Prime Video - no API, returns manual search instructions
+          - type: "primevideo"
+            enabled: true
+
     # Example of how to add more plugins:
     # - type: "spotify"
     #   config:
