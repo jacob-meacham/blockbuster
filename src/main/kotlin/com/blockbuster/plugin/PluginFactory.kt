@@ -1,6 +1,6 @@
 package com.blockbuster.plugin
 
-import com.blockbuster.media.RokuMediaStore
+import com.blockbuster.media.MediaStore
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 
@@ -16,7 +16,7 @@ data class PluginDefinition(
  * Factory for creating media plugins based on configuration
  */
 class PluginFactory(
-    private val rokuMediaStore: RokuMediaStore,
+    private val mediaStore: MediaStore,
     private val httpClient: OkHttpClient = OkHttpClient()
 ) {
 
@@ -49,7 +49,7 @@ class PluginFactory(
         return RokuPlugin(
             deviceIp = deviceIp,
             deviceName = deviceName,
-            rokuMediaStore = rokuMediaStore,
+            mediaStore = mediaStore,
             httpClient = httpClient
         )
     }

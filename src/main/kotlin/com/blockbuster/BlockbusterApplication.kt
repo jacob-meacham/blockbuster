@@ -8,8 +8,9 @@ import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.plugin.PluginFactory
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.SearchResource
+import com.blockbuster.resource.LibraryResource
 import com.blockbuster.resource.StaticResource
-import com.blockbuster.media.SqliteRokuMediaStore
+import com.blockbuster.media.SqliteMediaStore
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 import org.sqlite.SQLiteDataSource
@@ -67,14 +68,13 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         val flywayManager = FlywayManager(dataSource, configuration.database.jdbcUrl)
         flywayManager.migrate()
 
-        // Create Roku media store
-        val rokuMediaStore = SqliteRokuMediaStore(dataSource)
+        val mediaStore = SqliteMediaStore(dataSource)
 
         // Create HTTP client for plugins
         val httpClient = okhttp3.OkHttpClient()
 
         // Create plugin factory
-        val pluginFactory = PluginFactory(rokuMediaStore, httpClient)
+        val pluginFactory = PluginFactory(mediaStore, httpClient)
 
         // Create plugins from configuration
         val plugins = configuration.plugins.enabled.map { pluginDef ->
@@ -97,6 +97,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         environment.jersey().register(StaticResource())
         environment.jersey().register(HealthResource(flywayManager))
         environment.jersey().register(SearchResource(pluginManager))
+        environment.jersey().register(LibraryResource(pluginManager, mediaStore))
 
         // Register managed objects for lifecycle management
         environment.lifecycle().manage(object : io.dropwizard.lifecycle.Managed {
@@ -116,4 +117,11 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         println("🔗 JDBC URL: ${configuration.database.jdbcUrl}")
         println("🔌 Plugins loaded: ${plugins.map { it.getPluginName() }}")
     }
+    // private fun setupMetrics(metrics: MetricRegistry) {
+    //     val reporter = ConsoleReporter.forRegistry(metrics)
+    //         .convertRatesTo(TimeUnit.SECONDS)
+    //         .convertDurationsTo(TimeUnit.MILLISECONDS)
+    //         .build()
+    //     reporter.start(30, TimeUnit.SECONDS)
+    // }
 }

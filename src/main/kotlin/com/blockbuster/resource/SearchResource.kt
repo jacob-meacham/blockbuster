@@ -2,7 +2,6 @@ package com.blockbuster.resource
 
 import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.plugin.PluginException
-import com.blockbuster.media.RokuMediaContent
 import jakarta.ws.rs.*
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
@@ -22,7 +21,7 @@ class SearchResource(private val pluginManager: MediaPluginManager) {
         @QueryParam("limit") limit: Int = 10
     ): Response {
         return try {
-            if (query.isNullOrBlank()) {
+            if (query.isBlank()) {
                 return Response.status(Response.Status.BAD_REQUEST)
                     .entity(mapOf("error" to "Query parameter 'q' is required"))
                     .build()

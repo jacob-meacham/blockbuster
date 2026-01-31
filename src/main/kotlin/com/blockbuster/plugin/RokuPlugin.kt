@@ -1,111 +1,183 @@
 package com.blockbuster.plugin
 
+import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
 import org.slf4j.LoggerFactory
-import com.blockbuster.media.RokuMediaStore
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
  * Roku plugin for controlling Roku devices via ECP (External Control Protocol).
- * Uses basic HTTP requests to communicate with Roku devices.
- * 
- * ECP Command Format:
- * http://<roku-device-ip-address>:8060/<EcpCommand>/<channelId>?contentId=<contentIdValue>&mediaType=<mediaTypeValue>
+ *
+ * This plugin handles all Roku device communication while delegating channel-specific
+ * logic (deep links, action sequences, search) to RokuChannelPlugin implementations.
+ *
+ * Architecture:
+ * - RokuPlugin: Handles Roku device communication (ECP commands, keypresses)
+ * - RokuChannelPlugin: Handles channel-specific logic (Emby, Netflix, etc.)
  */
 class RokuPlugin(
     private val deviceIp: String,
     private val deviceName: String = "Roku Device",
-    private val rokuMediaStore: RokuMediaStore,
-    private val httpClient: OkHttpClient
+    private val mediaStore: MediaStore,
+    private val httpClient: OkHttpClient,
+    private val channelPlugins: Map<String, RokuChannelPlugin> = emptyMap()
 ) : MediaPlugin<RokuMediaContent> {
 
     private val logger = LoggerFactory.getLogger(javaClass)
-    private val ecpPort = 8060
-    private val ecpProtocol = "http"
 
     override fun getPluginName(): String = "roku"
-    
+
     override fun getDescription(): String = "Controls Roku devices via ECP protocol"
+
+    override fun getContentParser() = RokuMediaContent.Parser
 
     @Throws(PluginException::class)
     override fun play(contentId: String, options: Map<String, Any>) {
         try {
-            val content = rokuMediaStore.getMediaContent(contentId)
-            if (content == null) {
-                throw PluginException("Content not found in media store")
-            }
-            
-            val url = buildEcpUrl(content.ecpCommand, content.channelId, content.contentId, content.mediaType)
-            sendEcpRequest(url, "POST")
-            
-            logger.info("Successfully executed Roku ECP command: $url")
-            
+            val content = mediaStore.getParsed(contentId, getPluginName(), RokuMediaContent.Parser)
+                ?: throw PluginException("Content not found in media store: $contentId")
+
+            logger.info("Playing content: {} on channel: {} ({})", content.title, content.channelName, content.channelId)
+
+            // Get the channel plugin for this content
+            val channelPlugin = channelPlugins[content.channelId]
+                ?: throw PluginException("No channel plugin registered for channel ID: ${content.channelId}")
+
+            // Build playback command (deep link or action sequence)
+            val command = channelPlugin.buildPlaybackCommand(content, deviceIp)
+
+            // Execute the command
+            executePlaybackCommand(command)
+
+            logger.info("✅ Successfully initiated playback: {}", content.title)
+
         } catch (e: Exception) {
             logger.error("Failed to execute Roku command '$contentId': ${e.message}", e)
             throw PluginException("Failed to execute Roku command: ${e.message}", e)
         }
     }
-    
+
     /**
-     * Build the ECP URL according to the format:
-     * http://<ip>:8060/<ecpCommand>/<channelId>?contentId=<contentIdValue>&mediaType=<mediaTypeValue>
+     * Executes a playback command (either deep link or action sequence)
      */
-    private fun buildEcpUrl(ecpCommand: String, channelId: String, contentId: String?, mediaType: String?): String {
-        val baseUrl = "$ecpProtocol://$deviceIp:$ecpPort/$ecpCommand/$channelId"
-        
-        val queryParams = mutableListOf<String>()
-        if (!contentId.isNullOrBlank()) {
-            queryParams.add("contentId=$contentId")
-        }
-        if (!mediaType.isNullOrBlank()) {
-            queryParams.add("mediaType=$mediaType")
-        }
-        
-        return if (queryParams.isNotEmpty()) {
-            "$baseUrl?${queryParams.joinToString("&")}"
-        } else {
-            baseUrl
+    private fun executePlaybackCommand(command: RokuPlaybackCommand) {
+        when (command) {
+            is RokuPlaybackCommand.DeepLink -> {
+                logger.debug("Executing deep link: {}", command.url)
+                sendEcpRequest(command.url, "POST")
+            }
+            is RokuPlaybackCommand.ActionSequence -> {
+                logger.debug("Executing action sequence with {} steps", command.actions.size)
+                executeActionSequence(command.actions)
+            }
         }
     }
-    
+
     /**
-     * Send a key press to the Roku device
+     * Executes a sequence of Roku actions
      */
-    fun sendKeyPress(key: String) {
-        val url = "$ecpProtocol://$deviceIp:$ecpPort/keypress/$key"
+    private fun executeActionSequence(actions: List<RokuAction>) {
+        actions.forEachIndexed { index, action ->
+            logger.debug("Action {}/{}: {}", index + 1, actions.size, action)
+
+            when (action) {
+                is RokuAction.Launch -> {
+                    val url = "http://$deviceIp:8060/launch/${action.channelId}"
+                    sendEcpRequest(url, "POST")
+                }
+                is RokuAction.Press -> {
+                    repeat(action.count) {
+                        sendKeyPress(action.key)
+                    }
+                }
+                is RokuAction.Type -> {
+                    typeText(action.text)
+                }
+                is RokuAction.Wait -> {
+                    Thread.sleep(action.milliseconds)
+                }
+            }
+        }
+    }
+
+    /**
+     * Types text character by character on Roku
+     */
+    private fun typeText(text: String) {
+        text.forEach { char ->
+            val litCode = when {
+                char.isLetter() -> "Lit_${char.uppercaseChar()}"
+                char.isDigit() -> "Lit_$char"
+                char == ' ' -> "Lit_%20"
+                else -> {
+                    logger.warn("Unsupported character for typing: {}", char)
+                    return@forEach
+                }
+            }
+
+            val url = "http://$deviceIp:8060/keypress/$litCode"
+            sendEcpRequest(url, "POST")
+            Thread.sleep(50)  // Small delay between characters
+        }
+    }
+
+    /**
+     * Sends a key press to the Roku device
+     */
+    private fun sendKeyPress(key: RokuKey) {
+        val keyName = when (key) {
+            RokuKey.HOME -> "Home"
+            RokuKey.UP -> "Up"
+            RokuKey.DOWN -> "Down"
+            RokuKey.LEFT -> "Left"
+            RokuKey.RIGHT -> "Right"
+            RokuKey.SELECT -> "Select"
+            RokuKey.BACK -> "Back"
+            RokuKey.BACKSPACE -> "Backspace"
+            RokuKey.PLAY -> "Play"
+            RokuKey.PAUSE -> "Pause"
+            RokuKey.REV -> "Rev"
+            RokuKey.FWD -> "Fwd"
+            RokuKey.INSTANT_REPLAY -> "InstantReplay"
+            RokuKey.INFO -> "Info"
+            RokuKey.SEARCH -> "Search"
+        }
+
+        val url = "http://$deviceIp:8060/keypress/$keyName"
         sendEcpRequest(url, "POST")
+        Thread.sleep(100)  // Small delay between keypresses
     }
-    
+
     /**
-     * Get device information
+     * Gets device information from Roku
      */
     fun getDeviceInfo(): String? {
-        val url = "$ecpProtocol://$deviceIp:$ecpPort/query/device-info"
+        val url = "http://$deviceIp:8060/query/device-info"
         return sendEcpRequest(url, "GET")
     }
-    
+
     /**
-     * Send an ECP request to the Roku device
+     * Sends an ECP request to the Roku device
      */
     private fun sendEcpRequest(urlString: String, method: String): String? {
         return try {
             val requestBuilder = Request.Builder().url(urlString)
-            
+
             when (method.uppercase()) {
                 "GET" -> requestBuilder.get()
                 "POST" -> requestBuilder.post("".toRequestBody())
                 else -> throw IllegalArgumentException("Unsupported HTTP method: $method")
             }
-            
+
             val request = requestBuilder.build()
             val response = httpClient.newCall(request).execute()
-            
+
             val responseBody = response.body?.string()
-            
+
             if (response.isSuccessful) {
-                logger.debug("ECP request successful: $urlString, response: $responseBody")
+                logger.debug("ECP request successful: $urlString")
                 responseBody
             } else {
                 logger.error("ECP request failed: $urlString, response code: ${response.code}")
@@ -120,93 +192,28 @@ class RokuPlugin(
     @Throws(PluginException::class)
     override fun search(query: String, options: Map<String, Any>): List<SearchResult<RokuMediaContent>> {
         try {
-            logger.info("Searching for '$query' on Roku device")
+            logger.info("Searching for '$query' across {} channel(s)", channelPlugins.size)
 
-            // For demo purposes, return mock search results
-            // In a real implementation, this would query the Roku device's available channels/content
-            val mockResults = mutableListOf<SearchResult<RokuMediaContent>>()
+            // Collect search results from all channel plugins that support search
+            val allResults = mutableListOf<SearchResult<RokuMediaContent>>()
 
-            // Netflix content
-            if (query.lowercase().contains("matrix") || query.lowercase().contains("movie")) {
-                mockResults.add(
-                    SearchResult(
-                        title = "The Matrix Reloaded",
-                        url = null,
-                        mediaUrl = null,
-                        content = RokuMediaContent(
-                            channelName = "Netflix",
-                            channelId = "12",
-                            ecpCommand = "launch",
-                            contentId = "matrix-reloaded-123",
-                            mediaType = "movie",
-                            title = "The Matrix Reloaded"
+            channelPlugins.values.forEach { channelPlugin ->
+                val results = channelPlugin.search(query)
+                if (results != null) {
+                    logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
+                    allResults.addAll(results.map { content ->
+                        SearchResult(
+                            title = content.title ?: "Unknown",
+                            url = null,
+                            mediaUrl = null,
+                            content = content
                         )
-                    )
-                )
+                    })
+                }
             }
 
-            // HBO content
-            if (query.lowercase().contains("game") || query.lowercase().contains("throne")) {
-                mockResults.add(
-                    SearchResult(
-                        title = "Game of Thrones - Winter is Coming",
-                        url = null,
-                        mediaUrl = null,
-                        content = RokuMediaContent(
-                            channelName = "HBO Max",
-                            channelId = "61322",
-                            ecpCommand = "launch",
-                            contentId = "game-of-thrones-s01e01",
-                            mediaType = "episode",
-                            title = "Game of Thrones - Winter is Coming"
-                        )
-                    )
-                )
-            }
-
-            // Amazon Prime content
-            if (query.lowercase().contains("rings") || query.lowercase().contains("lord")) {
-                mockResults.add(
-                    SearchResult(
-                        title = "The Lord of the Rings: The Fellowship of the Ring",
-                        url = null,
-                        mediaUrl = null,
-                        content = RokuMediaContent(
-                            channelName = "Amazon Prime Video",
-                            channelId = "13",
-                            ecpCommand = "launch",
-                            contentId = "lotr-fellowship-456",
-                            mediaType = "movie",
-                            title = "The Lord of the Rings: The Fellowship of the Ring"
-                        )
-                    )
-                )
-            }
-
-            // Disney+ content
-            if (query.lowercase().contains("marvel") || query.lowercase().contains("avengers")) {
-                mockResults.add(
-                    SearchResult(
-                        title = "Avengers: Endgame",
-                        url = null,
-                        mediaUrl = null,
-                        content = RokuMediaContent(
-                            channelName = "Disney+",
-                            channelId = "291097",
-                            ecpCommand = "launch",
-                            contentId = "avengers-endgame-789",
-                            mediaType = "movie",
-                            title = "Avengers: Endgame"
-                        )
-                    )
-                )
-            }
-
-            // Filter results based on query if it's more specific
-            val filteredResults = mockResults.take(5) // Return first 5 results for general queries
-
-            logger.info("Found ${filteredResults.size} search results for query '$query'")
-            return filteredResults
+            logger.info("Found {} total search results for query '$query'", allResults.size)
+            return allResults
 
         } catch (e: Exception) {
             logger.error("Search failed for query '$query': ${e.message}", e)

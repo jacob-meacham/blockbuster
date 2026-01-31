@@ -26,8 +26,6 @@ class MediaPluginManager(private val plugins: List<MediaPlugin<*>>) {
      */
     fun getAllPlugins(): List<MediaPlugin<*>> = plugins
 
-
-
     /**
      * Play content using the specified plugin
      */

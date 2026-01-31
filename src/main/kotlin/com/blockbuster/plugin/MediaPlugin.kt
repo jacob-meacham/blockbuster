@@ -1,10 +1,12 @@
 package com.blockbuster.plugin
 
+import com.blockbuster.media.MediaContent
+import com.blockbuster.media.MediaContentParser
 /**
  * Core interface that all media plugins must implement.
  * Provides a simple contract for media playback and plugin identification.
  */
-interface MediaPlugin<C> {
+interface MediaPlugin<C : MediaContent> {
     
     /**
      * Get the unique name of this plugin
@@ -31,6 +33,11 @@ interface MediaPlugin<C> {
      */
     @Throws(PluginException::class)
     fun search(query: String, options: Map<String, Any> = emptyMap()): List<SearchResult<C>>
+
+    /**
+     * Provide a parser capable of converting JSON for this plugin into the strongly-typed content.
+     */
+    fun getContentParser(): MediaContentParser<C>
 }
 
 /**

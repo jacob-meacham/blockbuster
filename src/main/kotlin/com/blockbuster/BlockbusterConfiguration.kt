@@ -1,7 +1,6 @@
 package com.blockbuster
 
 import io.dropwizard.core.Configuration
-import io.dropwizard.db.DataSourceFactory
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull

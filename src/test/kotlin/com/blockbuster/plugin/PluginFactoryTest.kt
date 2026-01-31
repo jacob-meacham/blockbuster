@@ -1,7 +1,7 @@
 package com.blockbuster.plugin
 
-import com.blockbuster.media.RokuMediaStore
-import com.blockbuster.media.SqliteRokuMediaStore
+import com.blockbuster.media.MediaStore
+import com.blockbuster.media.SqliteMediaStore
 import okhttp3.OkHttpClient
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -17,20 +17,19 @@ import org.sqlite.SQLiteDataSource
 class PluginFactoryTest {
 
     private lateinit var pluginFactory: PluginFactory
-    private lateinit var rokuMediaStore: RokuMediaStore
     private lateinit var httpClient: OkHttpClient
+    private lateinit var mediaStore: MediaStore
 
     @BeforeEach
     fun setUp() {
-        // Create in-memory database for testing
-        val dataSource = SQLiteDataSource().apply {
+        // Create in-memory database-backed store
+        val ds = org.sqlite.SQLiteDataSource().apply {
             url = "jdbc:sqlite:file:testdb?mode=memory&cache=shared"
             setEnforceForeignKeys(true)
         }
-
-        rokuMediaStore = SqliteRokuMediaStore(dataSource)
+        mediaStore = SqliteMediaStore(ds)
         httpClient = OkHttpClient()
-        pluginFactory = PluginFactory(rokuMediaStore, httpClient)
+        pluginFactory = PluginFactory(mediaStore, httpClient)
     }
 
     @AfterEach

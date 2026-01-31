@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Assertions.*
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.*
+import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
-import com.blockbuster.media.RokuMediaStore
 import okhttp3.OkHttpClient
 import okhttp3.Call
 import okhttp3.Request
@@ -25,7 +25,7 @@ class RokuPluginTest {
     private val testDeviceName = "Test Roku Device"
     
     @Mock
-    private lateinit var mockRokuMediaStore: RokuMediaStore
+    private lateinit var mockMediaStore: MediaStore
     
     @Mock
     private lateinit var mockHttpClient: OkHttpClient
@@ -42,7 +42,7 @@ class RokuPluginTest {
         rokuPlugin = RokuPlugin(
             deviceIp = testDeviceIp,
             deviceName = testDeviceName,
-            rokuMediaStore = mockRokuMediaStore,
+            mediaStore = mockMediaStore,
             httpClient = mockHttpClient
         )
     }
@@ -85,7 +85,7 @@ class RokuPluginTest {
             title = "The Matrix"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -93,7 +93,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -109,7 +109,7 @@ class RokuPluginTest {
             title = "Game of Thrones"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -117,7 +117,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -131,7 +131,7 @@ class RokuPluginTest {
             contentId = "basic-content"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -139,7 +139,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -155,7 +155,7 @@ class RokuPluginTest {
             title = "The Matrix: Reloaded (2003)"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -163,7 +163,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -179,7 +179,7 @@ class RokuPluginTest {
             title = "Netflix App"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -187,7 +187,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -201,7 +201,7 @@ class RokuPluginTest {
             contentId = "movie123"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -209,7 +209,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -225,7 +225,7 @@ class RokuPluginTest {
             title = ""
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupSuccessfulHttpResponse()
         
         // When/Then
@@ -233,7 +233,7 @@ class RokuPluginTest {
             rokuPlugin.play(uuid, emptyMap())
         }
         
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
@@ -257,16 +257,16 @@ class RokuPluginTest {
             )
             
             // Reset mocks for each iteration
-            reset(mockRokuMediaStore, mockHttpClient, mockCall, mockResponse)
+            reset(mockMediaStore, mockHttpClient, mockCall, mockResponse)
             
-            whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+            whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
             setupSuccessfulHttpResponse()
             
             assertDoesNotThrow {
                 rokuPlugin.play(uuid, emptyMap())
             }
             
-            verify(mockRokuMediaStore).getMediaContent(uuid)
+            verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
             verify(mockHttpClient).newCall(any())
             verify(mockCall).execute()
         }
@@ -291,16 +291,16 @@ class RokuPluginTest {
             )
             
             // Reset mocks for each iteration
-            reset(mockRokuMediaStore, mockHttpClient, mockCall, mockResponse)
+            reset(mockMediaStore, mockHttpClient, mockCall, mockResponse)
             
-            whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+            whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
             setupSuccessfulHttpResponse()
             
             assertDoesNotThrow {
                 rokuPlugin.play(uuid, emptyMap())
             }
             
-            verify(mockRokuMediaStore).getMediaContent(uuid)
+            verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
             verify(mockHttpClient).newCall(any())
             verify(mockCall).execute()
         }
@@ -310,7 +310,7 @@ class RokuPluginTest {
     fun `should throw exception when content not found in media store`() {
         // Given
         val uuid = "nonExistentContent"
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(null)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(null)
         
         // When/Then
         val exception = assertThrows<PluginException> {
@@ -318,7 +318,7 @@ class RokuPluginTest {
         }
         
         assertEquals("Failed to execute Roku command: Content not found in media store", exception.message)
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient, never()).newCall(any())
     }
     
@@ -333,7 +333,7 @@ class RokuPluginTest {
             title = "The Matrix"
         )
         
-        whenever(mockRokuMediaStore.getMediaContent(uuid)).thenReturn(mockContent)
+        whenever(mockMediaStore.getParsed(uuid, "roku", RokuMediaContent.Parser)).thenReturn(mockContent)
         setupFailedHttpResponse(404)
         
         // When/Then
@@ -342,7 +342,7 @@ class RokuPluginTest {
         }
         
         assertEquals("Failed to execute Roku command: Failed to send ECP request: ECP request failed with response code: 404", exception.message)
-        verify(mockRokuMediaStore).getMediaContent(uuid)
+        verify(mockMediaStore).getParsed(uuid, "roku", RokuMediaContent.Parser)
         verify(mockHttpClient).newCall(any())
         verify(mockCall).execute()
     }
