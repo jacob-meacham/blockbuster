@@ -33,8 +33,6 @@ class BraveSearchConfiguration {
     @JsonProperty("apiKey")
     var apiKey: String? = null
 
-    @JsonProperty("enabledChannels")
-    var enabledChannels: List<String> = emptyList()
 }
 
 class DatabaseConfiguration {
@@ -44,17 +42,9 @@ class DatabaseConfiguration {
     @JsonProperty("jdbcUrl")
     var jdbcUrl: String = "jdbc:sqlite:blockbuster.db"
     
-    @JsonProperty("username")
-    var username: String? = null
-    
-    @JsonProperty("password")
-    var password: String? = null
 }
 
 class PluginsConfiguration {
-    @JsonProperty("configFile")
-    var configFile: String = "plugins.yml"
-
     @JsonProperty("enabled")
     var enabled: List<PluginDefinition> = listOf(
         PluginDefinition("roku", mapOf(

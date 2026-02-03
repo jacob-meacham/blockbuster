@@ -12,13 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
 
-/**
- * Plugin definition data class
- */
-data class PluginDefinition(
-    val type: String,
-    val config: Map<String, Any> = emptyMap()
-)
+import com.blockbuster.PluginDefinition
 
 /**
  * Factory for creating media plugins based on configuration
@@ -37,7 +31,6 @@ class PluginFactory(
     fun createPlugin(definition: PluginDefinition): MediaPlugin<*> {
         return when (definition.type.lowercase()) {
             "roku" -> createRokuPlugin(definition)
-            "spotify" -> createSpotifyPlugin(definition)
             else -> throw IllegalArgumentException("Unknown plugin type: ${definition.type}")
         }
     }
@@ -133,23 +126,5 @@ class PluginFactory(
             httpClient = httpClient,
             objectMapper = objectMapper
         )
-    }
-
-    /**
-     * Create a Spotify plugin from configuration (placeholder for future implementation)
-     */
-    private fun createSpotifyPlugin(definition: PluginDefinition): MediaPlugin<*> {
-        val config = definition.config
-
-        val clientId = config["clientId"] as? String
-            ?: throw IllegalArgumentException("Spotify plugin requires 'clientId' configuration")
-
-        val clientSecret = config["clientSecret"] as? String
-            ?: throw IllegalArgumentException("Spotify plugin requires 'clientSecret' configuration")
-
-        logger.info("Creating Spotify plugin: type=${definition.type}")
-
-        // TODO: Implement Spotify plugin
-        throw NotImplementedError("Spotify plugin not yet implemented")
     }
 }

@@ -36,11 +36,6 @@ class StaticResource {
     fun getIndex(): Response = serveIndexHtml()
 
     @GET
-    @Path("/search")
-    @Produces(MediaType.TEXT_HTML)
-    fun getSearch(): Response = serveIndexHtml()
-
-    @GET
     @Path("/static/{path:.*}")
     fun getStaticFile(@PathParam("path") path: String): Response {
         return try {
@@ -54,6 +49,9 @@ class StaticResource {
                 path.endsWith(".jpg") -> "image/jpeg"
                 path.endsWith(".jpeg") -> "image/jpeg"
                 path.endsWith(".gif") -> "image/gif"
+                path.endsWith(".svg") -> "image/svg+xml"
+                path.endsWith(".woff2") -> "font/woff2"
+                path.endsWith(".woff") -> "font/woff"
                 else -> "application/octet-stream"
             }
 

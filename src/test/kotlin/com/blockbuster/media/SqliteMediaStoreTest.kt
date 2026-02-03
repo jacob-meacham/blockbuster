@@ -171,4 +171,68 @@ class SqliteMediaStoreTest {
             assertEquals(contents[index].title, retrieved?.title)
         }
     }
+
+    @Test
+    fun `should store and retrieve content with metadata`() {
+        val content = RokuMediaContent(
+            channelName = "Emby",
+            channelId = "44191",
+            contentId = "12345",
+            title = "Inception",
+            mediaType = "Movie",
+            metadata = RokuMediaMetadata(
+                resumePositionTicks = 1800L,
+                officialRating = "PG-13",
+                year = 2010
+            )
+        )
+
+        val uuid = mediaStore.put("roku", content)
+        val retrieved = mediaStore.getParsed(uuid, "roku", RokuMediaContent)
+
+        assertNotNull(retrieved)
+        assertNotNull(retrieved!!.metadata)
+        assertEquals(1800L, retrieved.metadata!!.resumePositionTicks)
+        assertEquals("PG-13", retrieved.metadata!!.officialRating)
+        assertEquals(2010, retrieved.metadata!!.year)
+    }
+
+    @Test
+    fun `should list content by plugin`() {
+        mediaStore.put("roku", RokuMediaContent(channelId = "12", contentId = "1", title = "Movie 1"))
+        mediaStore.put("roku", RokuMediaContent(channelId = "44191", contentId = "2", title = "Movie 2"))
+
+        val items = mediaStore.list(0, 10, "roku")
+
+        assertEquals(2, items.size)
+        assertTrue(items.all { it.plugin == "roku" })
+    }
+
+    @Test
+    fun `should count content by plugin`() {
+        mediaStore.put("roku", RokuMediaContent(channelId = "12", contentId = "1", title = "Title 1"))
+        mediaStore.put("roku", RokuMediaContent(channelId = "44191", contentId = "2", title = "Title 2"))
+        mediaStore.put("roku", RokuMediaContent(channelId = "291097", contentId = "3", title = "Title 3"))
+
+        assertEquals(3, mediaStore.count("roku"))
+    }
+
+    @Test
+    fun `should handle pagination`() {
+        for (i in 1..5) {
+            mediaStore.put("roku", RokuMediaContent(channelId = "12", contentId = "id$i", title = "Title $i"))
+        }
+
+        val page1 = mediaStore.list(0, 2, "roku")
+        assertEquals(2, page1.size)
+
+        val page2 = mediaStore.list(2, 2, "roku")
+        assertEquals(2, page2.size)
+
+        val page3 = mediaStore.list(4, 2, "roku")
+        assertEquals(1, page3.size)
+
+        val allUuids = (page1 + page2 + page3).map { it.uuid }.toSet()
+        assertEquals(5, allUuids.size)
+    }
 }

@@ -1,5 +1,6 @@
 package com.blockbuster.plugin
 
+import com.blockbuster.PluginDefinition
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.SqliteMediaStore
 import okhttp3.OkHttpClient

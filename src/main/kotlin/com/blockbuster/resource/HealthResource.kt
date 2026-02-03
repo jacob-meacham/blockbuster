@@ -18,12 +18,10 @@ class HealthResource(private val flywayManager: FlywayManager) {
     fun health(): Response {
         return try {
             val migrationInfo = flywayManager.getMigrationInfo()
-            val isHealthy = true // For now, just assume healthy if we get here
 
             val response = mapOf(
                 "status" to "healthy",
-                "migrations" to migrationInfo,
-                "overall" to isHealthy
+                "migrations" to migrationInfo
             )
 
             Response.ok(response).build()
@@ -32,8 +30,7 @@ class HealthResource(private val flywayManager: FlywayManager) {
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(mapOf(
                     "status" to "error",
-                    "message" to e.message,
-                    "overall" to false
+                    "message" to e.message
                 ))
                 .build()
         }

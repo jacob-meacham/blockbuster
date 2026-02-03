@@ -2,7 +2,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.22"
-    kotlin("plugin.serialization") version "1.9.22"
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
@@ -27,9 +26,8 @@ dependencies {
     implementation("io.dropwizard.metrics:metrics-core:4.2.35")
     
     // Kotlin
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.16.1")
@@ -44,12 +42,6 @@ dependencies {
     // HTTP and networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // QR Code generation
-    implementation("com.google.zxing:core:3.5.1")
-    implementation("com.google.zxing:javase:3.5.1")
-
-    // YAML
-    implementation("org.yaml:snakeyaml:2.2")
     
     // Testing
     testImplementation("io.dropwizard:dropwizard-testing")
@@ -58,7 +50,6 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
     testImplementation("org.mockito:mockito-core:5.8.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
-    testImplementation("org.assertj:assertj-core:3.24.2")
     
     // JUnit Platform
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")

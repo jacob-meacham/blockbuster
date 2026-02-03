@@ -8,7 +8,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/search': 'http://localhost:8080',
-      '/library': 'http://localhost:8080'
+      '/library': 'http://localhost:8080',
+      '/play': 'http://localhost:8080'
     }
   },
   build: {
