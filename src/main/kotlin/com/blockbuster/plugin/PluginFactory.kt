@@ -1,6 +1,13 @@
 package com.blockbuster.plugin
 
 import com.blockbuster.media.MediaStore
+import com.blockbuster.plugin.roku.DisneyPlusRokuChannelPlugin
+import com.blockbuster.plugin.roku.EmbyRokuChannelPlugin
+import com.blockbuster.plugin.roku.HBOMaxRokuChannelPlugin
+import com.blockbuster.plugin.roku.NetflixRokuChannelPlugin
+import com.blockbuster.plugin.roku.PrimeVideoRokuChannelPlugin
+import com.blockbuster.plugin.roku.RokuChannelPlugin
+import com.blockbuster.plugin.roku.RokuPlugin
 import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
@@ -18,7 +25,8 @@ data class PluginDefinition(
  */
 class PluginFactory(
     private val mediaStore: MediaStore,
-    private val httpClient: OkHttpClient = OkHttpClient()
+    private val httpClient: OkHttpClient = OkHttpClient(),
+    private val braveSearchApiKey: String? = null
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -45,17 +53,21 @@ class PluginFactory(
 
         val deviceName = config["deviceName"] as? String ?: "Roku Device"
 
+        // Optional Brave Search API key for content discovery (plugin config overrides factory-level key)
+        val braveSearchApiKey = config["braveSearchApiKey"] as? String ?: this.braveSearchApiKey
+
         // Create channel plugins from configuration
         val channelPlugins = createRokuChannelPlugins(config)
 
-        logger.info("Creating Roku plugin: type=${definition.type}, ip=$deviceIp, deviceName=$deviceName, channels=${channelPlugins.size}")
+        logger.info("Creating Roku plugin: type=${definition.type}, ip=$deviceIp, deviceName=$deviceName, channels=${channelPlugins.size}, braveSearch=${!braveSearchApiKey.isNullOrBlank()}")
 
         return RokuPlugin(
             deviceIp = deviceIp,
             deviceName = deviceName,
             mediaStore = mediaStore,
             httpClient = httpClient,
-            channelPlugins = channelPlugins
+            channelPlugins = channelPlugins,
+            braveSearchApiKey = braveSearchApiKey
         )
     }
 

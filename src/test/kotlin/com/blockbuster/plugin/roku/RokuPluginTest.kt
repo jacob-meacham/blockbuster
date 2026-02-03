@@ -1,4 +1,4 @@
-package com.blockbuster.plugin
+package com.blockbuster.plugin.roku
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.mockito.kotlin.*
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
+import com.blockbuster.plugin.PluginException
 import okhttp3.OkHttpClient
 import okhttp3.Call
 import okhttp3.Request
@@ -79,7 +80,7 @@ class RokuPluginTest {
 
         // When
         assertDoesNotThrow {
-            rokuPlugin.play("uuid123", emptyMap())
+            rokuPlugin.play("uuid123")
         }
 
         // Then
@@ -119,7 +120,7 @@ class RokuPluginTest {
 
         // When
         assertDoesNotThrow {
-            rokuPlugin.play("uuid123", emptyMap())
+            rokuPlugin.play("uuid123")
         }
 
         // Then
@@ -142,7 +143,7 @@ class RokuPluginTest {
 
         // When/Then
         val exception = assertThrows(PluginException::class.java) {
-            rokuPlugin.play("nonexistent", emptyMap())
+            rokuPlugin.play("nonexistent")
         }
 
         assertTrue(exception.message!!.contains("Content not found in media store"))
@@ -170,7 +171,7 @@ class RokuPluginTest {
 
         // When/Then
         val exception = assertThrows(PluginException::class.java) {
-            rokuPlugin.play("uuid123", emptyMap())
+            rokuPlugin.play("uuid123")
         }
 
         assertTrue(exception.message!!.contains("No channel plugin registered for channel ID: 12"))
@@ -209,7 +210,7 @@ class RokuPluginTest {
         whenever(mockDisneyPlugin.search("test")).thenReturn(disneyResults)
 
         // When
-        val results = rokuPlugin.search("test", emptyMap())
+        val results = rokuPlugin.search("test")
 
         // Then
         assertEquals(2, results.size)
@@ -238,7 +239,7 @@ class RokuPluginTest {
         whenever(mockChannelPlugin.search("test")).thenReturn(emptyList())
 
         // When
-        val results = rokuPlugin.search("test", emptyMap())
+        val results = rokuPlugin.search("test")
 
         // Then
         assertTrue(results.isEmpty())
@@ -257,7 +258,7 @@ class RokuPluginTest {
         )
 
         // When
-        val results = rokuPlugin.search("test", emptyMap())
+        val results = rokuPlugin.search("test")
 
         // Then
         assertTrue(results.isEmpty())

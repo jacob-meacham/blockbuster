@@ -19,20 +19,19 @@ interface MediaPlugin<C : MediaContent> {
     fun getDescription(): String
 
     /**
-     * Play media content with the given ID and options
+     * Play media content with the given ID.
      *
      * @param contentId The content identifier (plugin-specific format)
-     * @param options Additional options for playback (plugin-specific)
      * @throws PluginException if playback fails
      */
     @Throws(PluginException::class)
-    fun play(contentId: String, options: Map<String, Any>)
+    fun play(contentId: String)
 
     /**
      * Search for media items for this plugin, returning strongly typed results.
      */
     @Throws(PluginException::class)
-    fun search(query: String, options: Map<String, Any> = emptyMap()): List<SearchResult<C>>
+    fun search(query: String, options: SearchOptions = SearchOptions()): List<SearchResult<C>>
 
     /**
      * Provide a parser capable of converting JSON for this plugin into the strongly-typed content.

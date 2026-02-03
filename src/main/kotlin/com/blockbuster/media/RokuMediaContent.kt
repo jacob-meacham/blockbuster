@@ -1,6 +1,35 @@
 package com.blockbuster.media
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import java.time.Instant
+
+/**
+ * Type-safe metadata for Roku media content.
+ *
+ * Replaces the previous Map<String, Any>? metadata field with properly typed fields.
+ * All fields are optional to support different channel types (Emby, Brave Search, etc.).
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class RokuMediaMetadata(
+    val description: String? = null,
+    val overview: String? = null,
+    val imageUrl: String? = null,
+    val searchUrl: String? = null,
+    val originalUrl: String? = null,
+    val resumePositionTicks: Long? = null,
+    val runtimeTicks: Long? = null,
+    val playedPercentage: Double? = null,
+    val isFavorite: Boolean? = null,
+    val communityRating: Double? = null,
+    val officialRating: String? = null,
+    val genres: List<String>? = null,
+    val serverId: String? = null,
+    val itemType: String? = null,
+    val seriesName: String? = null,
+    val seasonNumber: Int? = null,
+    val episodeNumber: Int? = null,
+    val year: Int? = null
+)
 
 /**
  * Roku media content that can be played on any Roku channel.
@@ -13,7 +42,7 @@ import java.time.Instant
  * @property contentId Channel-specific content identifier (e.g., Emby item ID)
  * @property title Content title for display and fallback search
  * @property mediaType Channel-specific media type (e.g., "Movie", "Episode")
- * @property metadata Channel-specific metadata (resume position, ratings, etc.)
+ * @property metadata Typed channel-specific metadata (resume position, ratings, etc.)
  */
 data class RokuMediaContent(
     val channelName: String? = null,
@@ -21,7 +50,7 @@ data class RokuMediaContent(
     val contentId: String,
     val title: String? = null,
     val mediaType: String? = null,
-    val metadata: Map<String, Any>? = null,
+    val metadata: RokuMediaMetadata? = null,
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now()
 ) : MediaContent {
@@ -32,5 +61,3 @@ data class RokuMediaContent(
             MediaJson.mapper.readValue(json, RokuMediaContent::class.java)
     }
 }
-
-

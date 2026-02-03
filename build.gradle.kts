@@ -43,7 +43,11 @@ dependencies {
     
     // HTTP and networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    
+
+    // QR Code generation
+    implementation("com.google.zxing:core:3.5.1")
+    implementation("com.google.zxing:javase:3.5.1")
+
     // YAML
     implementation("org.yaml:snakeyaml:2.2")
     
@@ -92,7 +96,7 @@ tasks.register<JavaExec>("run") {
     group = "application"
     description = "Run the Blockbuster application"
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("com.blockbuster.BlockbusterApplicationKt")
+    mainClass.set("com.blockbuster.BlockbusterApplication")
 
     // Pass through command line arguments via -Pargs="..."
     if (project.hasProperty("args")) {

@@ -1,22 +1,40 @@
 package com.blockbuster
 
+import com.blockbuster.theater.TheaterDevice
 import io.dropwizard.core.Configuration
 import com.fasterxml.jackson.annotation.JsonProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 
 class BlockbusterConfiguration : Configuration() {
-    
+
     @Valid
     @NotNull
     @JsonProperty("database")
     var database: DatabaseConfiguration = DatabaseConfiguration()
-    
+
+    @JsonProperty("baseUrl")
+    var baseUrl: String = "http://localhost:8080"
+
     @JsonProperty("plugins")
     var plugins: PluginsConfiguration = PluginsConfiguration()
-    
-    @JsonProperty("server")
-    var server: ServerConfiguration = ServerConfiguration()
+
+    @JsonProperty("braveSearch")
+    var braveSearch: BraveSearchConfiguration = BraveSearchConfiguration()
+
+    @JsonProperty("appliances")
+    var appliances: Map<String, ApplianceConfig> = emptyMap()
+}
+
+class BraveSearchConfiguration {
+    @JsonProperty("enabled")
+    var enabled: Boolean = false
+
+    @JsonProperty("apiKey")
+    var apiKey: String? = null
+
+    @JsonProperty("enabledChannels")
+    var enabledChannels: List<String> = emptyList()
 }
 
 class DatabaseConfiguration {
@@ -63,10 +81,12 @@ class PluginDefinition {
     }
 }
 
-class ServerConfiguration {
-    @JsonProperty("port")
-    var port: Int = 8080
-    
-    @JsonProperty("adminPort")
-    var adminPort: Int = 8081
-}
+/**
+ * Configuration for an NFC appliance.
+ *
+ * @param theater The theater device associated with this appliance
+ */
+data class ApplianceConfig(
+    @JsonProperty("theater")
+    val theater: TheaterDevice
+)

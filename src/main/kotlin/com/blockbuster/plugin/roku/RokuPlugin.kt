@@ -1,7 +1,12 @@
-package com.blockbuster.plugin
+package com.blockbuster.plugin.roku
 
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
+import com.blockbuster.plugin.MediaPlugin
+import com.blockbuster.plugin.PluginException
+import com.blockbuster.plugin.SearchOptions
+import com.blockbuster.plugin.SearchResult
+import com.blockbuster.search.BraveStreamingSearchProvider
 import org.slf4j.LoggerFactory
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -13,19 +18,50 @@ import okhttp3.RequestBody.Companion.toRequestBody
  * This plugin handles all Roku device communication while delegating channel-specific
  * logic (deep links, action sequences, search) to RokuChannelPlugin implementations.
  *
+ * Optionally integrates Brave Search API for content discovery across streaming services.
+ *
  * Architecture:
  * - RokuPlugin: Handles Roku device communication (ECP commands, keypresses)
  * - RokuChannelPlugin: Handles channel-specific logic (Emby, Netflix, etc.)
+ * - BraveStreamingSearchProvider (optional): Discovers content across streaming services
  */
 class RokuPlugin(
     private val deviceIp: String,
     private val deviceName: String = "Roku Device",
     private val mediaStore: MediaStore,
     private val httpClient: OkHttpClient,
-    private val channelPlugins: Map<String, RokuChannelPlugin> = emptyMap()
+    private val channelPlugins: Map<String, RokuChannelPlugin> = emptyMap(),
+    braveSearchApiKey: String? = null
 ) : MediaPlugin<RokuMediaContent> {
 
+    companion object {
+        /**
+         * Delay between individual character keypresses when typing text.
+         * Roku devices need time to process each character input.
+         */
+        const val CHAR_DELAY_MS = 50L
+
+        /**
+         * Delay between remote control keypresses.
+         * Ensures Roku processes each command before the next is sent.
+         */
+        const val KEYPRESS_DELAY_MS = 100L
+    }
+
     private val logger = LoggerFactory.getLogger(javaClass)
+
+    // Initialize Brave Search provider if API key is provided
+    private val braveSearchProvider: BraveStreamingSearchProvider? = if (!braveSearchApiKey.isNullOrBlank()) {
+        logger.info("Brave Search enabled for Roku plugin with ${channelPlugins.size} channels")
+        BraveStreamingSearchProvider(
+            apiKey = braveSearchApiKey,
+            httpClient = httpClient,
+            channelPlugins = channelPlugins.values
+        )
+    } else {
+        logger.debug("Brave Search disabled for Roku plugin")
+        null
+    }
 
     override fun getPluginName(): String = "roku"
 
@@ -34,7 +70,7 @@ class RokuPlugin(
     override fun getContentParser() = RokuMediaContent.Parser
 
     @Throws(PluginException::class)
-    override fun play(contentId: String, options: Map<String, Any>) {
+    override fun play(contentId: String) {
         try {
             val content = mediaStore.getParsed(contentId, getPluginName(), RokuMediaContent.Parser)
                 ?: throw PluginException("Content not found in media store: $contentId")
@@ -123,7 +159,7 @@ class RokuPlugin(
 
             val url = "http://$deviceIp:8060/keypress/$litCode"
             sendEcpRequest(url, "POST")
-            Thread.sleep(50)  // Small delay between characters
+            Thread.sleep(CHAR_DELAY_MS)  // Small delay between characters
         }
     }
 
@@ -151,7 +187,7 @@ class RokuPlugin(
 
         val url = "http://$deviceIp:8060/keypress/$keyName"
         sendEcpRequest(url, "POST")
-        Thread.sleep(100)  // Small delay between keypresses
+        Thread.sleep(KEYPRESS_DELAY_MS)  // Small delay between keypresses
     }
 
     /**
@@ -194,32 +230,65 @@ class RokuPlugin(
     }
 
     @Throws(PluginException::class)
-    override fun search(query: String, options: Map<String, Any>): List<SearchResult<RokuMediaContent>> {
+    override fun search(query: String, options: SearchOptions): List<SearchResult<RokuMediaContent>> {
         try {
             logger.info("Searching for '$query' across {} channel(s)", channelPlugins.size)
 
-            // Collect search results from all channel plugins that support search
             val allResults = mutableListOf<SearchResult<RokuMediaContent>>()
 
-            channelPlugins.values.forEach { channelPlugin ->
-                val results = channelPlugin.search(query)
-                logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
-                allResults.addAll(results.map { content ->
-                    SearchResult(
-                        title = content.title ?: "Unknown",
-                        url = null,
-                        mediaUrl = null,
-                        content = content
-                    )
-                })
+            // 1. Brave Search results (if configured)
+            braveSearchProvider?.let { braveSearch ->
+                try {
+                    val braveResults = braveSearch.searchStreaming(query, options.limit)
+                    logger.info("Brave Search returned {} results", braveResults.size)
+                    allResults.addAll(braveResults.map { content ->
+                        SearchResult(
+                            title = content.title ?: "Unknown",
+                            url = content.metadata?.searchUrl,
+                            mediaUrl = null,
+                            content = content
+                        )
+                    })
+                } catch (e: Exception) {
+                    logger.warn("Brave Search failed: ${e.message}")
+                }
             }
 
-            logger.info("Found {} total search results for query '$query'", allResults.size)
-            return allResults
+            // 2. Channel plugin search results (e.g., Emby API)
+            channelPlugins.values.forEach { channelPlugin ->
+                try {
+                    val results = channelPlugin.search(query)
+                    logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
+                    allResults.addAll(results.map { content ->
+                        SearchResult(
+                            title = content.title ?: "Unknown",
+                            url = null,
+                            mediaUrl = null,
+                            content = content
+                        )
+                    })
+                } catch (e: Exception) {
+                    logger.warn("Channel '{}' search failed: {}", channelPlugin.getChannelName(), e.message)
+                }
+            }
+
+            // Deduplicate by channel + contentId
+            val dedupResults = allResults.distinctBy { it.content.channelId to it.content.contentId }
+
+            logger.info("Found {} total search results for query '$query'", dedupResults.size)
+            return dedupResults
 
         } catch (e: Exception) {
             logger.error("Search failed for query '$query': ${e.message}", e)
             throw PluginException("Search failed: ${e.message}", e)
         }
+    }
+
+    /**
+     * Returns all registered channel plugins.
+     * Used by SearchResource to expose channel search URLs.
+     */
+    fun getAllChannelPlugins(): Collection<RokuChannelPlugin> {
+        return channelPlugins.values
     }
 }

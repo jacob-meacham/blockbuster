@@ -30,10 +30,10 @@ class MediaPluginManager(private val plugins: List<MediaPlugin<*>>) {
      * Play content using the specified plugin
      */
     @Throws(PluginException::class)
-    fun play(pluginName: String, contentId: String, options: Map<String, Any>) {
+    fun play(pluginName: String, contentId: String) {
         val plugin = pluginRegistry[pluginName]
             ?: throw PluginException("Plugin '$pluginName' not found")
 
-        plugin.play(contentId, options)
+        plugin.play(contentId)
     }
 }

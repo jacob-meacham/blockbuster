@@ -1,4 +1,4 @@
-package com.blockbuster.plugin
+package com.blockbuster.plugin.roku
 
 import com.blockbuster.media.RokuMediaContent
 
@@ -21,6 +21,21 @@ interface RokuChannelPlugin {
     fun getChannelName(): String
 
     /**
+     * Returns the public search domain for this channel (e.g., "netflix.com", "disneyplus.com").
+     * Used for building site: filters in web search APIs.
+     *
+     * Returns empty string for private/local servers (e.g., Emby on localhost)
+     * that should not be included in public web searches.
+     */
+    fun getPublicSearchDomain(): String
+
+    /**
+     * Returns the search URL for this channel (e.g., "https://netflix.com/search").
+     * Used for manual search instructions when API search isn't available.
+     */
+    fun getSearchUrl(): String
+
+    /**
      * Builds the playback command for this channel.
      * Returns either a deep link URL or an action sequence.
      */
@@ -35,6 +50,16 @@ interface RokuChannelPlugin {
      * Never returns null - always provides either results or instructions.
      */
     fun search(query: String): List<RokuMediaContent> = emptyList()
+
+    /**
+     * Extracts RokuMediaContent from a channel-specific URL.
+     *
+     * Default implementation returns null (e.g., Emby doesn't need URL extraction).
+     *
+     * @param url The URL to extract content from
+     * @return RokuMediaContent if extraction successful, null otherwise
+     */
+    fun extractFromUrl(url: String): RokuMediaContent? = null
 }
 
 /**

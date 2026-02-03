@@ -7,15 +7,18 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:copy": "cp -r dist/* ../src/main/resources/assets/"
+    "build:copy": "rm -rf ../src/main/resources/assets/* && cp -r dist/* ../src/main/resources/assets/",
+    "build:deploy": "npm run build && npm run build:copy"
   },
   "dependencies": {
     "@emotion/react": "^11.11.4",
     "@emotion/styled": "^11.11.5",
+    "@mui/icons-material": "^5.18.0",
     "@mui/material": "^5.15.14",
     "@mui/x-data-grid": "^6.19.6",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.13.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",

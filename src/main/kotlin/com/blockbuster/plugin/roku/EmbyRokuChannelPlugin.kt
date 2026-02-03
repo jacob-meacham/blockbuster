@@ -1,6 +1,8 @@
-package com.blockbuster.plugin
+package com.blockbuster.plugin.roku
 
 import com.blockbuster.media.RokuMediaContent
+import com.blockbuster.media.RokuMediaMetadata
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
 import okhttp3.OkHttpClient
@@ -35,10 +37,14 @@ class EmbyRokuChannelPlugin(
 
     override fun getChannelName(): String = "Emby"
 
+    override fun getPublicSearchDomain(): String = ""  // Private server, not for public web search
+
+    override fun getSearchUrl(): String = "$embyServerUrl/web/index.html#!/search.html"
+
     override fun buildPlaybackCommand(content: RokuMediaContent, rokuDeviceIp: String): RokuPlaybackCommand {
         // Parse content metadata to get Emby-specific fields
         val itemId = content.contentId
-        val resumePosition = content.metadata?.get("resumePositionTicks") as? Long
+        val resumePosition = content.metadata?.resumePositionTicks
 
         // Build validated deep link URL
         val params = mutableListOf(
@@ -74,48 +80,43 @@ class EmbyRokuChannelPlugin(
             .get()
             .build()
 
-        try {
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    logger.warn("Emby search failed: {} - {}", response.code, response.message)
-                    return emptyList()
-                }
-
-                val responseBody = response.body?.string() ?: return emptyList()
-                val searchResponse = objectMapper.readValue(responseBody, EmbySearchResponse::class.java)
-
-                logger.info("Found {} Emby results for query: {}", searchResponse.items.size, query)
-
-                return searchResponse.items.map { item ->
-                    RokuMediaContent(
-                        channelName = getChannelName(),
-                        channelId = getChannelId(),
-                        contentId = item.id,
-                        title = buildTitle(item),
-                        mediaType = item.type,
-                        metadata = mapOf(
-                            "serverId" to item.serverId,
-                            "itemType" to item.type,
-                            "seriesName" to (item.seriesName ?: ""),
-                            "seasonNumber" to (item.parentIndexNumber ?: 0),
-                            "episodeNumber" to (item.indexNumber ?: 0),
-                            "year" to (item.productionYear ?: 0),
-                            "overview" to (item.overview ?: ""),
-                            "imageUrl" to buildImageUrl(item.id, item.imageTags?.primary),
-                            "resumePositionTicks" to (item.userData?.playbackPositionTicks ?: 0L),
-                            "runtimeTicks" to (item.runTimeTicks ?: 0L),
-                            "playedPercentage" to (item.userData?.playedPercentage ?: 0.0),
-                            "isFavorite" to (item.userData?.isFavorite ?: false),
-                            "communityRating" to (item.communityRating ?: 0.0),
-                            "officialRating" to (item.officialRating ?: ""),
-                            "genres" to (item.genres ?: emptyList<String>())
-                        )
-                    )
-                }
+        httpClient.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw IOException("Emby search failed: ${response.code} - ${response.message}")
             }
-        } catch (e: IOException) {
-            logger.error("Network error during Emby search", e)
-            return emptyList()
+
+            val responseBody = response.body?.string()
+                ?: throw IOException("Empty response body from Emby search")
+            val searchResponse = objectMapper.readValue(responseBody, EmbySearchResponse::class.java)
+
+            logger.info("Found {} Emby results for query: {}", searchResponse.items.size, query)
+
+            return searchResponse.items.map { item ->
+                RokuMediaContent(
+                    channelName = getChannelName(),
+                    channelId = getChannelId(),
+                    contentId = item.id,
+                    title = buildTitle(item),
+                    mediaType = item.type,
+                    metadata = RokuMediaMetadata(
+                        serverId = item.serverId,
+                        itemType = item.type,
+                        seriesName = item.seriesName,
+                        seasonNumber = item.parentIndexNumber,
+                        episodeNumber = item.indexNumber,
+                        year = item.productionYear,
+                        overview = item.overview,
+                        imageUrl = buildImageUrl(item.id, item.imageTags?.primary),
+                        resumePositionTicks = item.userData?.playbackPositionTicks,
+                        runtimeTicks = item.runTimeTicks,
+                        playedPercentage = item.userData?.playedPercentage,
+                        isFavorite = item.userData?.isFavorite,
+                        communityRating = item.communityRating,
+                        officialRating = item.officialRating,
+                        genres = item.genres
+                    )
+                )
+            }
         }
     }
 
@@ -130,11 +131,13 @@ class EmbyRokuChannelPlugin(
     }
 
     // Emby API response DTOs
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class EmbySearchResponse(
         @JsonProperty("Items") val items: List<EmbyItem>,
         @JsonProperty("TotalRecordCount") val totalRecordCount: Int
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class EmbyItem(
         @JsonProperty("Id") val id: String,
         @JsonProperty("ServerId") val serverId: String,
@@ -154,13 +157,16 @@ class EmbyRokuChannelPlugin(
         @JsonProperty("Genres") val genres: List<String>? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class ImageTags(
         @JsonProperty("Primary") val primary: String? = null
     )
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     data class UserData(
         @JsonProperty("PlaybackPositionTicks") val playbackPositionTicks: Long? = null,
         @JsonProperty("PlayedPercentage") val playedPercentage: Double? = null,
-        @JsonProperty("IsFavorite") val isFavorite: Boolean = false
+        @JsonProperty("IsFavorite") val isFavorite: Boolean = false,
+        @JsonProperty("PlayCount") val playCount: Int? = null
     )
 }

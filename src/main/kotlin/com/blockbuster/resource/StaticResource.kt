@@ -1,6 +1,9 @@
 package com.blockbuster.resource
 
-import jakarta.ws.rs.*
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
@@ -10,9 +13,7 @@ class StaticResource {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    @GET
-    @Produces(MediaType.TEXT_HTML)
-    fun getIndex(): Response {
+    private fun serveIndexHtml(): Response {
         return try {
             val inputStream = javaClass.classLoader.getResourceAsStream("assets/index.html")
                 ?: return Response.status(Response.Status.NOT_FOUND)
@@ -29,6 +30,15 @@ class StaticResource {
                 .build()
         }
     }
+
+    @GET
+    @Produces(MediaType.TEXT_HTML)
+    fun getIndex(): Response = serveIndexHtml()
+
+    @GET
+    @Path("/search")
+    @Produces(MediaType.TEXT_HTML)
+    fun getSearch(): Response = serveIndexHtml()
 
     @GET
     @Path("/static/{path:.*}")

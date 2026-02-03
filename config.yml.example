@@ -1,7 +1,8 @@
+baseUrl: "http://blockbuster.local:8585"
+
 database:
   type: "sqlite"
   jdbcUrl: "jdbc:sqlite:blockbuster.db"
-  driverClass: "org.sqlite.JDBC"
 
 plugins:
   configFile: "plugins.yml"
@@ -10,9 +11,10 @@ plugins:
       config:
         deviceIp: "192.168.1.100"
         deviceName: "Living Room Roku"
+
         # Configure Roku channel plugins
         channels:
-          # Emby - requires API access for search
+          # Emby - has API search capability
           - type: "emby"
             enabled: true
             config:
@@ -20,19 +22,19 @@ plugins:
               apiKey: "your-emby-api-key"
               userId: "your-emby-user-id"
 
-          # Disney+ - no API, returns manual search instructions
+          # Disney+ - no public API (use Brave Search for discovery)
           - type: "disney+"
             enabled: true
 
-          # Netflix - no API, returns manual search instructions
+          # Netflix - no public API (use Brave Search for discovery)
           - type: "netflix"
             enabled: true
 
-          # HBO Max - no API, returns manual search instructions
+          # HBO Max - no public API (use Brave Search for discovery)
           - type: "hbomax"
             enabled: true
 
-          # Prime Video - no API, returns manual search instructions
+          # Prime Video - no public API (use Brave Search for discovery)
           - type: "primevideo"
             enabled: true
 
@@ -42,9 +44,47 @@ plugins:
     #     clientId: "your-spotify-client-id"
     #     clientSecret: "your-spotify-client-secret"
 
+# Brave Search API for automated content discovery across streaming services
+# Get API key from: https://brave.com/search/api/
+braveSearch:
+  enabled: false
+  apiKey: ""
+  enabledChannels:
+    - "Netflix"
+    - "Disney+"
+    - "HBO Max"
+    - "Prime Video"
+
+# NFC Appliance configuration (optional)
+# Associates appliance device IDs with theater devices for automated setup
+appliances:
+  # Example: Living room appliance with Harmony Hub
+  living-room:
+    theater:
+      type: harmony_hub
+      ip: "192.168.1.50"
+      activityId: "12345678"
+      delayMs: 5000
+
+  # Example: Bedroom appliance with Home Assistant automation
+  bedroom:
+    theater:
+      type: home_assistant
+      ip: "192.168.1.10"
+      automationId: "automation.bedroom_movie_mode"
+
+  # Example: Kitchen appliance with no theater setup (playback only)
+  kitchen:
+    theater:
+      type: none
+
 server:
-  port: 8080
-  adminPort: 8081
+  applicationConnectors:
+    - type: http
+      port: 8080
+  adminConnectors:
+    - type: http
+      port: 8081
 
 logging:
   level: INFO

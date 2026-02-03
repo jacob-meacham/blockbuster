@@ -56,6 +56,18 @@ interface MediaPlugin {
 java -jar build/libs/blockbuster-1.0.0-SNAPSHOT.jar server config.yml
 ```
 
+### Building the Frontend
+
+When you modify the React frontend, rebuild and deploy it:
+```bash
+cd frontend
+npm run build:deploy
+cd ..
+./gradlew build
+```
+
+The `build:deploy` script builds the frontend and copies it to `src/main/resources/assets/`.
+
 ### Accessing the Web Interface
 - **Main Interface**: http://localhost:8080/
 - **Search API**: http://localhost:8080/search/roku?q=matrix

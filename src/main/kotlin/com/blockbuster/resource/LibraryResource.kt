@@ -4,7 +4,14 @@ import com.blockbuster.media.MediaItem
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.MediaJson
 import com.blockbuster.plugin.MediaPluginManager
-import jakarta.ws.rs.*
+import jakarta.ws.rs.BadRequestException
+import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.GET
+import jakarta.ws.rs.POST
+import jakarta.ws.rs.Path
+import jakarta.ws.rs.PathParam
+import jakarta.ws.rs.Produces
+import jakarta.ws.rs.QueryParam
 import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
@@ -14,7 +21,8 @@ import org.slf4j.LoggerFactory
 @Consumes(MediaType.APPLICATION_JSON)
 class LibraryResource(
     private val pluginManager: MediaPluginManager,
-    private val mediaStore: MediaStore
+    private val mediaStore: MediaStore,
+    private val baseUrl: String = "http://localhost:8080"
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -38,7 +46,7 @@ class LibraryResource(
         val total = mediaStore.count(plugin)
 
         return Response.ok(mapOf(
-            "items" to items.map { it.toResponseMap() },
+            "items" to items.map { it.toResponseMap(baseUrl) },
             "page" to p,
             "pageSize" to ps,
             "total" to total
@@ -61,8 +69,14 @@ class LibraryResource(
             val assignedUuid = request.uuid?.also {
                 mediaStore.update(it, pluginName.lowercase(), typed)
             } ?: mediaStore.put(pluginName.lowercase(), typed)
+
+            val blockbusterUrl = "${baseUrl.trimEnd('/')}/play/$assignedUuid"
+
             logger.info("Stored content for plugin=$pluginName uuid=$assignedUuid")
-            Response.ok(mapOf("uuid" to assignedUuid)).build()
+            Response.ok(mapOf(
+                "uuid" to assignedUuid,
+                "url" to blockbusterUrl
+            )).build()
         } catch (e: Exception) {
             logger.error("Failed to add to library: ${e.message}", e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -71,11 +85,12 @@ class LibraryResource(
         }
     }
 }
-private fun MediaItem.toResponseMap(): Map<String, Any?> = mapOf(
+private fun MediaItem.toResponseMap(baseUrl: String): Map<String, Any?> = mapOf(
     "plugin" to plugin,
     "uuid" to uuid,
     "configJson" to configJson,
-    "updatedAt" to updatedAt.toString()
+    "updatedAt" to updatedAt.toString(),
+    "playUrl" to "${baseUrl.trimEnd('/')}/play/$uuid"
 )
 
 

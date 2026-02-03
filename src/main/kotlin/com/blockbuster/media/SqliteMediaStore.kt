@@ -83,7 +83,7 @@ class SqliteMediaStore(
             }
         } catch (e: SQLException) {
             logger.error("Failed to get media item: ${e.message}", e)
-            null
+            throw e
         }
     }
 
@@ -151,6 +151,7 @@ class SqliteMediaStore(
             }
         } catch (e: SQLException) {
             logger.error("Failed to list media items: ${e.message}", e)
+            throw e
         }
         return items
     }
@@ -176,6 +177,7 @@ class SqliteMediaStore(
             }
         } catch (e: SQLException) {
             logger.error("Failed to count media items: ${e.message}", e)
+            throw e
         }
         return 0
     }
