@@ -8,6 +8,8 @@ import io.dropwizard.jetty.HttpConnectorFactory
 import com.blockbuster.db.FlywayManager
 import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.plugin.PluginFactory
+import com.blockbuster.health.DatabaseHealthCheck
+import com.blockbuster.health.MediaPluginHealthCheck
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.SearchResource
 import com.blockbuster.resource.LibraryResource
@@ -97,6 +99,10 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
             createTheaterHandler(appliance.theater, theaterHttpClient)
         }
         val theaterManager = TheaterDeviceManager(theaterHandlers)
+
+        // Register health checks
+        environment.healthChecks().register("database", DatabaseHealthCheck(dataSource))
+        environment.healthChecks().register("plugins", MediaPluginHealthCheck(pluginManager))
 
         // Register resources
         environment.jersey().register(HealthResource(flywayManager))
