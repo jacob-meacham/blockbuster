@@ -16,11 +16,14 @@ package com.blockbuster.plugin.roku
  * 4. Content auto-plays
  */
 class DisneyPlusRokuChannelPlugin : StreamingRokuChannelPlugin() {
-
     override fun getChannelId(): String = "291097"
+
     override fun getChannelName(): String = "Disney+"
+
     override fun getPublicSearchDomain(): String = "disneyplus.com"
+
     override fun getSearchUrl(): String = "https://www.disneyplus.com/search"
+
     override val urlPattern = Regex("""disneyplus\.com/(?:play|video)/([a-f0-9-]+)""")
     override val defaultTitle = "Disney+ Content"
     override val postLaunchKey = RokuKey.SELECT

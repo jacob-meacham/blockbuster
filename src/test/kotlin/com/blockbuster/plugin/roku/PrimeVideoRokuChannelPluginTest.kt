@@ -1,10 +1,9 @@
 package com.blockbuster.plugin.roku
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class PrimeVideoRokuChannelPluginTest : StreamingRokuChannelPluginTest() {
-
     override val plugin = PrimeVideoRokuChannelPlugin()
     override val expectedChannelId = "13"
     override val expectedChannelName = "Prime Video"

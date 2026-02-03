@@ -28,7 +28,7 @@ data class RokuMediaMetadata(
     val seriesName: String? = null,
     val seasonNumber: Int? = null,
     val episodeNumber: Int? = null,
-    val year: Int? = null
+    val year: Int? = null,
 )
 
 /**
@@ -52,12 +52,11 @@ data class RokuMediaContent(
     val mediaType: String? = null,
     val metadata: RokuMediaMetadata? = null,
     val createdAt: Instant = Instant.now(),
-    val updatedAt: Instant = Instant.now()
+    val updatedAt: Instant = Instant.now(),
 ) : MediaContent {
     override fun toJson(): String = MediaJson.mapper.writeValueAsString(this)
 
     companion object Parser : MediaContentParser<RokuMediaContent> {
-        override fun fromJson(json: String): RokuMediaContent =
-            MediaJson.mapper.readValue(json, RokuMediaContent::class.java)
+        override fun fromJson(json: String): RokuMediaContent = MediaJson.mapper.readValue(json, RokuMediaContent::class.java)
     }
 }

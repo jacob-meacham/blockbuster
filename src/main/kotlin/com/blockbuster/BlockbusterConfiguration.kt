@@ -1,13 +1,12 @@
 package com.blockbuster
 
 import com.blockbuster.theater.TheaterDevice
-import io.dropwizard.core.Configuration
 import com.fasterxml.jackson.annotation.JsonProperty
+import io.dropwizard.core.Configuration
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 
 class BlockbusterConfiguration : Configuration() {
-
     @Valid
     @NotNull
     @JsonProperty("database")
@@ -32,16 +31,14 @@ class BraveSearchConfiguration {
 
     @JsonProperty("apiKey")
     var apiKey: String? = null
-
 }
 
 class DatabaseConfiguration {
     @JsonProperty("type")
     var type: String = "sqlite"
-    
+
     @JsonProperty("jdbcUrl")
     var jdbcUrl: String = "jdbc:sqlite:blockbuster.db"
-    
 }
 
 class PluginDefinition {
@@ -68,5 +65,5 @@ class PluginDefinition {
  */
 data class ApplianceConfig(
     @JsonProperty("theater")
-    val theater: TheaterDevice
+    val theater: TheaterDevice,
 )

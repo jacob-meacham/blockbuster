@@ -14,7 +14,7 @@ sealed class TheaterDevice {
     data class HarmonyHub(
         val ip: String,
         val activityId: String,
-        val delayMs: Long = 5000
+        val delayMs: Long = 5000,
     ) : TheaterDevice() {
         init {
             require(ip.isNotBlank()) { "HarmonyHub ip must not be blank" }
@@ -31,7 +31,7 @@ sealed class TheaterDevice {
      */
     data class HomeAssistant(
         val ip: String,
-        val automationId: String
+        val automationId: String,
     ) : TheaterDevice()
 
     /**
@@ -40,7 +40,7 @@ sealed class TheaterDevice {
      * @param ip IP address of the Roku device
      */
     data class Roku(
-        val ip: String
+        val ip: String,
     ) : TheaterDevice()
 
     /**

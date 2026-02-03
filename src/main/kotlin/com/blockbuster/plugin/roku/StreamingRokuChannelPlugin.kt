@@ -18,12 +18,19 @@ import com.blockbuster.media.RokuMediaContent
  * Optionally override [buildContentFromMatch] for custom media type logic (e.g., Netflix).
  */
 abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
+    companion object {
+        /** Delay after channel launch before sending keypress, allowing the app to load. */
+        const val POST_LAUNCH_DELAY_MS = 2000L
+    }
 
     abstract val urlPattern: Regex
     abstract val defaultTitle: String
     abstract val postLaunchKey: RokuKey
 
-    override fun buildPlaybackCommand(content: RokuMediaContent, rokuDeviceIp: String): RokuPlaybackCommand {
+    override fun buildPlaybackCommand(
+        content: RokuMediaContent,
+        rokuDeviceIp: String,
+    ): RokuPlaybackCommand {
         val contentId = content.contentId
         val mediaType = content.mediaType?.lowercase() ?: "movie"
 
@@ -31,11 +38,11 @@ abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
             listOf(
                 RokuAction.Launch(
                     channelId = getChannelId(),
-                    params = "contentId=$contentId&mediaType=$mediaType"
+                    params = "contentId=$contentId&mediaType=$mediaType",
                 ),
-                RokuAction.Wait(2000),
-                RokuAction.Press(postLaunchKey, 1)
-            )
+                RokuAction.Wait(POST_LAUNCH_DELAY_MS),
+                RokuAction.Press(postLaunchKey, 1),
+            ),
         )
     }
 
@@ -50,13 +57,16 @@ abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
      * Builds a [RokuMediaContent] from a URL regex match.
      * Override for custom media type logic (e.g., Netflix watch vs title).
      */
-    protected open fun buildContentFromMatch(match: MatchResult, url: String): RokuMediaContent {
+    protected open fun buildContentFromMatch(
+        match: MatchResult,
+        url: String,
+    ): RokuMediaContent {
         return RokuMediaContent(
             channelName = getChannelName(),
             channelId = getChannelId(),
             contentId = match.groupValues[1],
             title = defaultTitle,
-            mediaType = "movie"
+            mediaType = "movie",
         )
     }
 }

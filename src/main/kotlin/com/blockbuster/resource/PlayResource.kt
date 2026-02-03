@@ -24,9 +24,8 @@ import org.slf4j.LoggerFactory
 class PlayResource(
     private val mediaStore: MediaStore,
     private val pluginManager: MediaPluginManager,
-    private val theaterManager: TheaterDeviceManager
+    private val theaterManager: TheaterDeviceManager,
 ) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
 
     /**
@@ -36,10 +35,13 @@ class PlayResource(
     @GET
     @Path("/{uuid}")
     @Produces(MediaType.TEXT_HTML)
-    fun playPage(@PathParam("uuid") uuid: String): String {
-        val mediaItem = mediaStore.get(uuid)
-            ?: return loadTemplate("not-found.html")
-                .replace("{{uuid}}", uuid)
+    fun playPage(
+        @PathParam("uuid") uuid: String,
+    ): String {
+        val mediaItem =
+            mediaStore.get(uuid)
+                ?: return loadTemplate("not-found.html")
+                    .replace("{{uuid}}", uuid)
 
         return loadTemplate("play.html")
             .replace("{{uuid}}", uuid)
@@ -60,19 +62,21 @@ class PlayResource(
     @Path("/{uuid}")
     fun play(
         @PathParam("uuid") uuid: String,
-        @QueryParam("deviceId") deviceId: String?
+        @QueryParam("deviceId") deviceId: String?,
     ): Response {
         logger.info("Play request: uuid=$uuid deviceId=$deviceId")
 
-        val mediaItem = mediaStore.get(uuid)
-            ?: return Response.status(Response.Status.NOT_FOUND)
-                .entity(mapOf("error" to "Content not found", "uuid" to uuid))
-                .build()
+        val mediaItem =
+            mediaStore.get(uuid)
+                ?: return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Content not found", "uuid" to uuid))
+                    .build()
 
-        val plugin = pluginManager.getPlugin(mediaItem.plugin)
-            ?: return Response.status(Response.Status.NOT_FOUND)
-                .entity(mapOf("error" to "Plugin not found", "plugin" to mediaItem.plugin))
-                .build()
+        val plugin =
+            pluginManager.getPlugin(mediaItem.plugin)
+                ?: return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Plugin not found", "plugin" to mediaItem.plugin))
+                    .build()
 
         return try {
             // Execute theater setup if device specified (best-effort)
@@ -89,12 +93,14 @@ class PlayResource(
             logger.info("Starting playback via plugin: ${mediaItem.plugin}")
             plugin.play(uuid)
 
-            Response.ok(mapOf(
-                "status" to "playing",
-                "uuid" to uuid,
-                "plugin" to mediaItem.plugin,
-                "device" to (deviceId ?: "direct")
-            )).build()
+            Response.ok(
+                mapOf(
+                    "status" to "playing",
+                    "uuid" to uuid,
+                    "plugin" to mediaItem.plugin,
+                    "device" to (deviceId ?: "direct"),
+                ),
+            ).build()
         } catch (e: IllegalArgumentException) {
             // Unknown deviceId
             logger.error("Invalid device: ${e.message}")

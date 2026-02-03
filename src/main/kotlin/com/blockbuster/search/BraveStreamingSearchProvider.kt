@@ -1,12 +1,10 @@
 package com.blockbuster.search
 
+import com.blockbuster.media.MediaJson
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.media.RokuMediaMetadata
 import com.blockbuster.plugin.roku.RokuChannelPlugin
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.kotlinModule
-import com.fasterxml.jackson.module.kotlin.readValue
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.LoggerFactory
@@ -28,16 +26,17 @@ import org.slf4j.LoggerFactory
 class BraveStreamingSearchProvider(
     private val apiKey: String,
     private val httpClient: OkHttpClient,
-    private val channelPlugins: Collection<RokuChannelPlugin>
+    private val channelPlugins: Collection<RokuChannelPlugin>,
 ) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
-    private val mapper = ObjectMapper().registerModule(kotlinModule())
 
     /**
      * Search for streaming content across configured public channels.
      */
-    fun searchStreaming(query: String, maxResults: Int = 10): List<RokuMediaContent> {
+    fun searchStreaming(
+        query: String,
+        maxResults: Int = 10,
+    ): List<RokuMediaContent> {
         if (apiKey.isBlank()) {
             logger.debug("Brave Search API key not configured, skipping")
             return emptyList()
@@ -57,15 +56,16 @@ class BraveStreamingSearchProvider(
      * Example output: "the matrix (site:netflix.com OR site:disneyplus.com)"
      */
     private fun buildSiteQuery(query: String): String {
-        val sites = channelPlugins.mapNotNull { channel ->
-            val domain = channel.getPublicSearchDomain()
-            if (domain.isBlank()) {
-                logger.debug("Skipping '${channel.getChannelName()}' - no public search domain")
-                null
-            } else {
-                "site:$domain"
+        val sites =
+            channelPlugins.mapNotNull { channel ->
+                val domain = channel.getPublicSearchDomain()
+                if (domain.isBlank()) {
+                    logger.debug("Skipping '{}' - no public search domain", channel.getChannelName())
+                    null
+                } else {
+                    "site:$domain"
+                }
             }
-        }
 
         return if (sites.isNotEmpty()) {
             "watch $query (${sites.joinToString(" OR ")})"
@@ -75,26 +75,31 @@ class BraveStreamingSearchProvider(
         }
     }
 
-    private fun executeSearch(query: String, count: Int): BraveSearchResponse {
-        val url = "https://api.search.brave.com/res/v1/web/search" +
+    private fun executeSearch(
+        query: String,
+        count: Int,
+    ): BraveSearchResponse {
+        val url =
+            "https://api.search.brave.com/res/v1/web/search" +
                 "?q=${java.net.URLEncoder.encode(query, "UTF-8")}" +
                 "&count=$count"
 
-        val request = Request.Builder()
-            .url(url)
-            .header("Accept", "application/json")
-            .header("X-Subscription-Token", apiKey)
-            .get()
-            .build()
+        val request =
+            Request.Builder()
+                .url(url)
+                .header("Accept", "application/json")
+                .header("X-Subscription-Token", apiKey)
+                .get()
+                .build()
 
         httpClient.newCall(request).execute().use { response ->
             val body = response.body?.string() ?: ""
 
             if (!response.isSuccessful) {
-                logger.error("Brave Search API error (${response.code}): $body")
+                logger.error("Brave Search API error ({}): {}", response.code, body)
                 throw BraveSearchException(
                     "API request failed with status ${response.code}: ${response.message}",
-                    statusCode = response.code
+                    statusCode = response.code,
                 )
             }
 
@@ -102,7 +107,7 @@ class BraveStreamingSearchProvider(
                 throw BraveSearchException("Empty response from Brave Search API")
             }
 
-            return mapper.readValue(body)
+            return MediaJson.mapper.readValue(body, BraveSearchResponse::class.java)
         }
     }
 
@@ -123,14 +128,16 @@ class BraveStreamingSearchProvider(
 
             if (content != null) {
                 // Enrich with title, description, image, and original URL from search result
-                val enriched = content.copy(
-                    title = result.title ?: content.title,
-                    metadata = (content.metadata ?: RokuMediaMetadata()).copy(
-                        description = result.description ?: content.metadata?.description,
-                        originalUrl = url,
-                        imageUrl = result.thumbnail?.src ?: content.metadata?.imageUrl
+                val enriched =
+                    content.copy(
+                        title = result.title ?: content.title,
+                        metadata =
+                            (content.metadata ?: RokuMediaMetadata()).copy(
+                                description = result.description ?: content.metadata?.description,
+                                originalUrl = url,
+                                imageUrl = result.thumbnail?.src ?: content.metadata?.imageUrl,
+                            ),
                     )
-                )
                 results.add(enriched)
             } else {
                 logger.debug("No channel matched URL: {}", url)
@@ -142,12 +149,12 @@ class BraveStreamingSearchProvider(
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class BraveSearchResponse(
-        val web: WebResults?
+        val web: WebResults?,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class WebResults(
-        val results: List<SearchResult>?
+        val results: List<SearchResult>?,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -155,12 +162,12 @@ class BraveStreamingSearchProvider(
         val title: String?,
         val url: String?,
         val description: String?,
-        val thumbnail: Thumbnail? = null
+        val thumbnail: Thumbnail? = null,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class Thumbnail(
-        val src: String?
+        val src: String?,
     )
 }
 
@@ -170,5 +177,5 @@ class BraveStreamingSearchProvider(
 class BraveSearchException(
     message: String,
     val statusCode: Int? = null,
-    cause: Throwable? = null
+    cause: Throwable? = null,
 ) : Exception(message, cause)

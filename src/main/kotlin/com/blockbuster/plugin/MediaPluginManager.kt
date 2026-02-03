@@ -7,7 +7,6 @@ import org.slf4j.LoggerFactory
  * and provides methods to interact with them.
  */
 class MediaPluginManager(private val plugins: List<MediaPlugin<*>>) {
-
     private val logger = LoggerFactory.getLogger(javaClass)
     private val pluginRegistry: Map<String, MediaPlugin<*>>
 
@@ -30,9 +29,13 @@ class MediaPluginManager(private val plugins: List<MediaPlugin<*>>) {
      * Play content using the specified plugin
      */
     @Throws(PluginException::class)
-    fun play(pluginName: String, contentId: String) {
-        val plugin = pluginRegistry[pluginName]
-            ?: throw PluginException("Plugin '$pluginName' not found")
+    fun play(
+        pluginName: String,
+        contentId: String,
+    ) {
+        val plugin =
+            pluginRegistry[pluginName]
+                ?: throw PluginException("Plugin '$pluginName' not found")
 
         plugin.play(contentId)
     }

@@ -19,11 +19,14 @@ package com.blockbuster.plugin.roku
  * 4. Content auto-plays
  */
 class PrimeVideoRokuChannelPlugin : StreamingRokuChannelPlugin() {
-
     override fun getChannelId(): String = "13"
+
     override fun getChannelName(): String = "Prime Video"
+
     override fun getPublicSearchDomain(): String = "amazon.com"
+
     override fun getSearchUrl(): String = "https://www.primevideo.com/search?phrase="
+
     override val urlPattern = Regex("""(?:amazon\.com|primevideo\.com)/.*?/([B][A-Z0-9]{9})""")
     override val defaultTitle = "Prime Video Content"
     override val postLaunchKey = RokuKey.SELECT

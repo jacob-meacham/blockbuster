@@ -1,10 +1,9 @@
 package com.blockbuster.plugin.roku
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class DisneyPlusRokuChannelPluginTest : StreamingRokuChannelPluginTest() {
-
     override val plugin = DisneyPlusRokuChannelPlugin()
     override val expectedChannelId = "291097"
     override val expectedChannelName = "Disney+"

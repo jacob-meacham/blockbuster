@@ -23,7 +23,7 @@ fun interface TheaterDeviceHandler {
 class TheaterSetupException(
     val deviceType: String,
     message: String,
-    cause: Throwable? = null
+    cause: Throwable? = null,
 ) : RuntimeException("$deviceType setup failed: $message", cause)
 
 /**
@@ -35,7 +35,10 @@ class TheaterSetupException(
  * so the Kotlin compiler will produce a build error if a new variant
  * is added to [TheaterDevice] without updating this mapping.
  */
-fun createTheaterHandler(device: TheaterDevice, http: TheaterHttpClient): TheaterDeviceHandler? {
+fun createTheaterHandler(
+    device: TheaterDevice,
+    http: TheaterHttpClient,
+): TheaterDeviceHandler? {
     return when (device) {
         is TheaterDevice.HarmonyHub -> HarmonyHubHandler(device, http)
         is TheaterDevice.HomeAssistant -> HomeAssistantHandler(device, http)

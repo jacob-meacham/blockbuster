@@ -16,7 +16,10 @@ interface TheaterHttpClient {
      * @param deviceType Human-readable device type for error messages
      * @throws TheaterSetupException if the response is non-2xx
      */
-    fun sendAndCheck(request: HttpRequest, deviceType: String)
+    fun sendAndCheck(
+        request: HttpRequest,
+        deviceType: String,
+    )
 }
 
 /**
@@ -25,10 +28,12 @@ interface TheaterHttpClient {
  * Throws [TheaterSetupException] on non-2xx responses.
  */
 class DefaultTheaterHttpClient(private val httpClient: HttpClient) : TheaterHttpClient {
-
     private val logger = LoggerFactory.getLogger(DefaultTheaterHttpClient::class.java)
 
-    override fun sendAndCheck(request: HttpRequest, deviceType: String) {
+    override fun sendAndCheck(
+        request: HttpRequest,
+        deviceType: String,
+    ) {
         val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
         val status = response.statusCode()
         logger.debug("{} response: {}", deviceType, status)

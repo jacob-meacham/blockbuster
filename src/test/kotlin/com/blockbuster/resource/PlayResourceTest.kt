@@ -13,7 +13,6 @@ import org.mockito.kotlin.*
 import java.time.Instant
 
 class PlayResourceTest {
-
     private lateinit var mediaStore: MediaStore
     private lateinit var pluginManager: MediaPluginManager
     private lateinit var theaterManager: TheaterDeviceManager
@@ -31,13 +30,14 @@ class PlayResourceTest {
     fun `play with valid UUID returns 200`() {
         // Given
         val uuid = "test-uuid-123"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "roku",
-            configJson = """{"channelId":"12","contentId":"81444554"}""",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                configJson = """{"channelId":"12","contentId":"81444554"}""",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
@@ -57,13 +57,14 @@ class PlayResourceTest {
         // Given
         val uuid = "test-uuid-123"
         val deviceId = "living-room"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "roku",
-            configJson = """{"channelId":"12","contentId":"81444554"}""",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                configJson = """{"channelId":"12","contentId":"81444554"}""",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
@@ -97,13 +98,14 @@ class PlayResourceTest {
     fun `play with missing plugin returns 404`() {
         // Given
         val uuid = "test-uuid-123"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "nonexistent-plugin",
-            configJson = "{}",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "nonexistent-plugin",
+                configJson = "{}",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
         whenever(pluginManager.getPlugin("nonexistent-plugin")).thenReturn(null)
@@ -121,13 +123,14 @@ class PlayResourceTest {
         // Given
         val uuid = "test-uuid-123"
         val deviceId = "unknown-device"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "roku",
-            configJson = "{}",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                configJson = "{}",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
@@ -146,13 +149,14 @@ class PlayResourceTest {
     fun `play with plugin error returns 500`() {
         // Given
         val uuid = "test-uuid-123"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "roku",
-            configJson = "{}",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                configJson = "{}",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
@@ -170,13 +174,14 @@ class PlayResourceTest {
     fun `playPage with valid UUID returns HTML`() {
         // Given
         val uuid = "test-uuid-123"
-        val mediaItem = MediaItem(
-            uuid = uuid,
-            plugin = "roku",
-            configJson = "{}",
-            createdAt = Instant.now(),
-            updatedAt = Instant.now()
-        )
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                configJson = "{}",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
 

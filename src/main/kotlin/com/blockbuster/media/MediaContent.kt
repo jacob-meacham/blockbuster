@@ -14,9 +14,8 @@ interface MediaContentParser<T : MediaContent> {
 }
 
 object MediaJson {
-    val mapper: ObjectMapper = jacksonObjectMapper()
-        .registerModule(KotlinModule.Builder().build())
-        .registerModule(JavaTimeModule())
+    val mapper: ObjectMapper =
+        jacksonObjectMapper()
+            .registerModule(KotlinModule.Builder().build())
+            .registerModule(JavaTimeModule())
 }
-
-

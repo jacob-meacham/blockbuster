@@ -3,6 +3,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.9.22"
     id("com.gradleup.shadow") version "9.0.0"
+    id("io.gitlab.arturbosch.detekt") version "1.23.4"
+    id("org.jmailen.kotlinter") version "4.2.0"
+    jacoco
 }
 
 group = "com.blockbuster"
@@ -50,6 +53,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
     testImplementation("org.mockito:mockito-core:5.8.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     
     // JUnit Platform
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")
@@ -59,6 +63,19 @@ tasks.withType<KotlinCompile> {
     kotlinOptions {
         jvmTarget = "21"
         freeCompilerArgs += listOf("-Xjsr305=strict", "-opt-in=kotlin.RequiresOptIn")
+    }
+}
+
+detekt {
+    config.setFrom(files("detekt.yml"))
+    buildUponDefaultConfig = true
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
     }
 }
 
