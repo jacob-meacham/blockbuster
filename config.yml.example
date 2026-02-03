@@ -5,44 +5,37 @@ database:
   jdbcUrl: "jdbc:sqlite:blockbuster.db"
 
 plugins:
-  configFile: "plugins.yml"
-  enabled:
-    - type: "roku"
-      config:
-        deviceIp: "192.168.1.100"
-        deviceName: "Living Room Roku"
+  - type: "roku"
+    config:
+      deviceIp: "192.168.1.100"
+      deviceName: "Living Room Roku"
 
-        # Configure Roku channel plugins
-        channels:
-          # Emby - has API search capability
-          - type: "emby"
-            enabled: true
-            config:
-              serverUrl: "https://emby.example.com"
-              apiKey: "your-emby-api-key"
-              userId: "your-emby-user-id"
+      # Configure Roku channel plugins
+      channels:
+        # Emby - has API search capability
+        - type: "emby"
+          config:
+            serverUrl: "https://emby.example.com"
+            apiKey: "your-emby-api-key"
+            userId: "your-emby-user-id"
 
-          # Disney+ - no public API (use Brave Search for discovery)
-          - type: "disney+"
-            enabled: true
+        # Disney+ - no public API (use Brave Search for discovery)
+        - type: "disney+"
 
-          # Netflix - no public API (use Brave Search for discovery)
-          - type: "netflix"
-            enabled: true
+        # Netflix - no public API (use Brave Search for discovery)
+        - type: "netflix"
 
-          # HBO Max - no public API (use Brave Search for discovery)
-          - type: "hbomax"
-            enabled: true
+        # HBO Max - no public API (use Brave Search for discovery)
+        - type: "hbomax"
 
-          # Prime Video - no public API (use Brave Search for discovery)
-          - type: "primevideo"
-            enabled: true
+        # Prime Video - no public API (use Brave Search for discovery)
+        - type: "primevideo"
 
-    # Example of how to add more plugins:
-    # - type: "spotify"
-    #   config:
-    #     clientId: "your-spotify-client-id"
-    #     clientSecret: "your-spotify-client-secret"
+  # Example of how to add more plugins:
+  # - type: "spotify"
+  #   config:
+  #     clientId: "your-spotify-client-id"
+  #     clientSecret: "your-spotify-client-secret"
 
 # Brave Search API for automated content discovery across streaming services
 # Get API key from: https://brave.com/search/api/
