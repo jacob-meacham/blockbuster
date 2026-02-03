@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8585:8585"
+    volumes:
+      - ./config.yml:/config/config.yml:ro
+      - ./data:/app/data
+    networks:
+      - blockbuster
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8586:80"
+    depends_on:
+      - backend
+    networks:
+      - blockbuster
+
+volumes:
+  blockbuster-data:
+
+networks:
+  blockbuster:

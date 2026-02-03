@@ -17,7 +17,7 @@ class BlockbusterConfiguration : Configuration() {
     var baseUrl: String = "http://localhost:8080"
 
     @JsonProperty("plugins")
-    var plugins: PluginsConfiguration = PluginsConfiguration()
+    var plugins: List<PluginDefinition> = emptyList()
 
     @JsonProperty("braveSearch")
     var braveSearch: BraveSearchConfiguration = BraveSearchConfiguration()
@@ -42,16 +42,6 @@ class DatabaseConfiguration {
     @JsonProperty("jdbcUrl")
     var jdbcUrl: String = "jdbc:sqlite:blockbuster.db"
     
-}
-
-class PluginsConfiguration {
-    @JsonProperty("enabled")
-    var enabled: List<PluginDefinition> = listOf(
-        PluginDefinition("roku", mapOf(
-            "deviceIp" to "192.168.1.100",
-            "deviceName" to "Living Room Roku"
-        ))
-    )
 }
 
 class PluginDefinition {

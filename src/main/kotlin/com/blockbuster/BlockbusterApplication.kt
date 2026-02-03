@@ -11,7 +11,6 @@ import com.blockbuster.plugin.PluginFactory
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.SearchResource
 import com.blockbuster.resource.LibraryResource
-import com.blockbuster.resource.StaticResource
 import com.blockbuster.resource.PlayResource
 import com.blockbuster.media.SqliteMediaStore
 import com.blockbuster.theater.TheaterDeviceManager
@@ -80,7 +79,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         val pluginFactory = PluginFactory(mediaStore, httpClient, braveApiKey)
 
         // Create plugins from configuration
-        val plugins = configuration.plugins.enabled.map { pluginDef ->
+        val plugins = configuration.plugins.map { pluginDef ->
             try {
                 pluginFactory.createPlugin(pluginDef)
             } catch (e: Exception) {
@@ -100,7 +99,6 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         val theaterManager = TheaterDeviceManager(theaterHandlers)
 
         // Register resources
-        environment.jersey().register(StaticResource())
         environment.jersey().register(HealthResource(flywayManager))
         environment.jersey().register(SearchResource(pluginManager))
         environment.jersey().register(LibraryResource(pluginManager, mediaStore, configuration.baseUrl))

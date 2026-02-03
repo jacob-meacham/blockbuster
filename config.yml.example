@@ -49,11 +49,6 @@ plugins:
 braveSearch:
   enabled: false
   apiKey: ""
-  enabledChannels:
-    - "Netflix"
-    - "Disney+"
-    - "HBO Max"
-    - "Prime Video"
 
 # NFC Appliance configuration (optional)
 # Associates appliance device IDs with theater devices for automated setup

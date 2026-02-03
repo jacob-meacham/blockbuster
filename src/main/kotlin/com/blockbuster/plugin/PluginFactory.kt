@@ -76,9 +76,6 @@ class PluginFactory(
 
         for (channelConfig in channelsConfig) {
             val type = channelConfig["type"] as? String ?: continue
-            val enabled = channelConfig["enabled"] as? Boolean ?: true
-            if (!enabled) continue
-
             val channelSpecificConfig = channelConfig["config"] as? Map<String, Any> ?: emptyMap()
 
             try {

@@ -1,0 +1,4 @@
+.gradle/
+build/
+frontend/
+*.db

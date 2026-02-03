@@ -3,7 +3,7 @@ dist
 .DS_Store
 .vite
 *.log
-
+.env.local
 
 
 

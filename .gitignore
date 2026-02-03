@@ -1,14 +1,13 @@
 # Build outputs
 build/
-gradle/wrapper/gradle-wrapper.jar
-gradle/wrapper/gradle-wrapper.properties
-gradlew
-gradlew.bat
+out/
+bin/
+
+# Gradle
 .gradle/
+gradle-app.setting
 
-config.yml
-
-# IDE files
+# IDE
 .idea/
 *.iml
 *.ipr
@@ -18,7 +17,7 @@ config.yml
 *.swo
 *~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
@@ -26,10 +25,11 @@ Thumbs.db
 *.log
 logs/
 
-# Database files (for local development)
+# Database
 *.db
 *.sqlite
 *.sqlite3
+*.db-journal
 
 # Temporary files
 *.tmp
@@ -39,44 +39,10 @@ logs/
 *.exec
 coverage/
 
-# IntelliJ IDEA
-.idea/
-out/
-
-# Eclipse
-.classpath
-.project
-.settings/
-
-# NetBeans
-nbproject/
-
-# VS Code
-.vscode/
-
-# Maven (if used)
-target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.jar
-
-# Gradle
-.gradle
-build/
-gradle-app.setting
-!gradle-wrapper.jar
-!gradle-wrapper.properties
-
 # Kotlin
 .kotlin/
 
-# Java
+# Java / JVM artifacts
 *.class
 *.jar
 *.war
@@ -85,22 +51,23 @@ gradle-app.setting
 hs_err_pid*
 replay_pid*
 
-# Package Files
-*.jar
-*.war
-*.nar
-*.ear
+# Package archives
 *.zip
 *.tar.gz
 *.rar
 
-# Application specific
-blockbuster.db
-*.db-journal
-
-# Config files that might contain secrets
+# Config files with secrets
+config.yml
 config.local.yml
 config.dev.yml
 config.prod.yml
 
-bin/
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Gradle wrapper — un-ignore AFTER the *.jar rule above
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+data/

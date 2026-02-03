@@ -112,7 +112,7 @@ export function SearchView() {
   const [snackbar, setSnackbar] = React.useState<{ open: boolean, message: string, severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' })
   const [channels, setChannels] = React.useState<ChannelInfo[]>([])
   const [plugins, setPlugins] = React.useState<PluginInfo[]>([])
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout>()
+  const searchTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>()
 
   // Fetch channel and plugin info on mount
   React.useEffect(() => {
