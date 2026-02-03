@@ -1,4 +1,4 @@
 .gradle/
 build/
-frontend/
 *.db
+frontend/node_modules/

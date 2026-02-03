@@ -1,0 +1,390 @@
+import React from 'react'
+import {
+  Box,
+  TextField,
+  Typography,
+  Container,
+  InputAdornment,
+  Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  IconButton,
+  List,
+  ListItem,
+  ListItemText,
+  Chip
+} from '@mui/material'
+import SearchIcon from '@mui/icons-material/Search'
+import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
+import CloseIcon from '@mui/icons-material/Close'
+import { useSearch } from './hooks/useSearch'
+import { useLibrary } from './hooks/useLibrary'
+import { fetchPlugins, fetchChannels } from './api'
+import { MediaCard } from './components/MediaCard'
+import type { PluginInfo, ChannelInfo, SearchResult } from './types'
+import { channelColors } from './types'
+
+export function UnifiedView() {
+  const search = useSearch()
+  const library = useLibrary()
+  const [plugins, setPlugins] = React.useState<PluginInfo[]>([])
+  const [channels, setChannels] = React.useState<ChannelInfo[]>([])
+  const [manualDialogOpen, setManualDialogOpen] = React.useState(false)
+  const [snackbar, setSnackbar] = React.useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'error'
+  }>({ open: false, message: '', severity: 'success' })
+
+  React.useEffect(() => {
+    fetchPlugins().then(setPlugins).catch(console.error)
+    fetchChannels().then(setChannels).catch(console.error)
+  }, [])
+
+  const isSearching = search.query.length >= 2
+  const isLoading = isSearching ? search.loading : library.loading
+
+  async function handleCardClick(result: SearchResult) {
+    // Manual search tile
+    if (result.contentId === 'MANUAL_SEARCH_TILE') {
+      setManualDialogOpen(true)
+      return
+    }
+
+    // Manual instruction (not clickable)
+    if (result.contentId === 'MANUAL_SEARCH_REQUIRED' || result.content?.metadata?.instructions) {
+      return
+    }
+
+    const inLibrary = library.isInLibrary(
+      result.content?.channelId || result.channelId,
+      result.content?.contentId || result.contentId
+    )
+
+    if (inLibrary) {
+      // Copy existing play URL
+      const libItem = library.getLibraryItem(
+        result.content?.channelId || result.channelId,
+        result.content?.contentId || result.contentId
+      )
+      if (libItem?.playUrl) {
+        try {
+          await navigator.clipboard.writeText(libItem.playUrl)
+          setSnackbar({ open: true, message: 'Copied play URL to clipboard', severity: 'success' })
+        } catch {
+          setSnackbar({ open: true, message: 'Failed to copy URL', severity: 'error' })
+        }
+      }
+    } else {
+      // Add to library
+      try {
+        const url = await library.addItem(result)
+        await navigator.clipboard.writeText(url)
+        setSnackbar({ open: true, message: 'Added to library — play URL copied', severity: 'success' })
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e)
+        setSnackbar({ open: true, message: `Error: ${message}`, severity: 'error' })
+      }
+    }
+  }
+
+  function handleLibraryCardClick(item: { playUrl: string }) {
+    if (item.playUrl) {
+      navigator.clipboard.writeText(item.playUrl).then(() => {
+        setSnackbar({ open: true, message: 'Copied play URL to clipboard', severity: 'success' })
+      }).catch(() => {
+        setSnackbar({ open: true, message: 'Failed to copy URL', severity: 'error' })
+      })
+    }
+  }
+
+  return (
+    <Box sx={{
+      minHeight: '100vh',
+      background: 'linear-gradient(to bottom, #141414 0%, #000000 100%)',
+      pt: 4,
+      pb: 8
+    }}>
+      <Container maxWidth="lg">
+        {/* Hero Search */}
+        <Box sx={{ mb: 6, textAlign: 'center' }}>
+          <Typography
+            variant="h2"
+            sx={{
+              fontWeight: 700,
+              color: '#fff',
+              mb: 1,
+              fontSize: { xs: '2rem', md: '3rem' }
+            }}
+          >
+            Blockbuster
+          </Typography>
+          <Typography variant="subtitle1" sx={{ color: '#999', mb: 4 }}>
+            Search across all your streaming services
+          </Typography>
+
+          {/* Plugin Selector */}
+          {plugins.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+              <ToggleButtonGroup
+                value={search.selectedPlugin}
+                exclusive
+                onChange={(_, value) => value && search.setSelectedPlugin(value)}
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    color: '#999',
+                    borderColor: '#333',
+                    textTransform: 'none',
+                    px: 3,
+                    '&.Mui-selected': {
+                      bgcolor: '#E50914',
+                      color: '#fff',
+                      borderColor: '#E50914',
+                      '&:hover': {
+                        bgcolor: '#B8070F'
+                      }
+                    },
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.05)'
+                    }
+                  }
+                }}
+              >
+                <ToggleButton value="all">All Sources</ToggleButton>
+                {plugins.map((plugin) => (
+                  <ToggleButton key={plugin.name} value={plugin.name}>
+                    {plugin.name.charAt(0).toUpperCase() + plugin.name.slice(1)}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            </Box>
+          )}
+
+          <TextField
+            fullWidth
+            value={search.query}
+            onChange={(e) => search.updateQuery(e.target.value)}
+            placeholder="Search for movies, shows, or paste a URL..."
+            variant="outlined"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon sx={{ color: '#999', fontSize: 28 }} />
+                </InputAdornment>
+              ),
+              sx: {
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 2,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: '2px solid rgba(255, 255, 255, 0.2)'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  border: '2px solid rgba(255, 255, 255, 0.4)'
+                },
+                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                  border: '2px solid #E50914'
+                },
+                color: '#fff',
+                fontSize: '1.1rem',
+                py: 1
+              }
+            }}
+          />
+        </Box>
+
+        {/* Section Header */}
+        {!isLoading && (
+          <Typography
+            variant="h5"
+            sx={{ color: '#fff', fontWeight: 600, mb: 3 }}
+          >
+            {isSearching ? 'Search Results' : 'Your Library'}
+          </Typography>
+        )}
+
+        {/* Loading Skeletons */}
+        {isLoading && (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 3 }}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton
+                key={i}
+                variant="rectangular"
+                height={400}
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+              />
+            ))}
+          </Box>
+        )}
+
+        {/* Search Results */}
+        {!isLoading && isSearching && search.results.length > 0 && (
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 3
+          }}>
+            {search.results.map((result, idx) => (
+              <MediaCard
+                key={`${result.channelId}-${result.contentId}-${idx}`}
+                title={result.title}
+                channelName={result.channelName}
+                channelId={result.channelId}
+                contentId={result.contentId}
+                imageUrl={result.imageUrl}
+                description={result.description}
+                mediaType={result.mediaType}
+                instructions={result.content?.metadata?.instructions}
+                isInLibrary={library.isInLibrary(
+                  result.content?.channelId || result.channelId,
+                  result.content?.contentId || result.contentId
+                )}
+                isManualSearchTile={result.contentId === 'MANUAL_SEARCH_TILE'}
+                onClick={() => handleCardClick(result)}
+                index={idx}
+              />
+            ))}
+          </Box>
+        )}
+
+        {/* Empty Search State */}
+        {!isLoading && isSearching && search.results.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h5" sx={{ color: '#666', mb: 2 }}>
+              No results found
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#999' }}>
+              Try a different search term or paste a URL from your streaming service
+            </Typography>
+          </Box>
+        )}
+
+        {/* Library Items (when not searching) */}
+        {!isLoading && !isSearching && library.libraryItems.length > 0 && (
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 3
+          }}>
+            {library.libraryItems.map((item, idx) => (
+              <MediaCard
+                key={item.uuid}
+                title={item.parsedContent?.title || item.parsedContent?.contentId || 'Untitled'}
+                channelName={item.parsedContent?.channelName}
+                channelId={item.parsedContent?.channelId || ''}
+                contentId={item.parsedContent?.contentId || ''}
+                imageUrl={item.parsedContent?.metadata?.imageUrl}
+                description={item.parsedContent?.metadata?.description || item.parsedContent?.metadata?.overview}
+                mediaType={item.parsedContent?.mediaType}
+                isInLibrary={true}
+                onClick={() => handleLibraryCardClick(item)}
+                index={idx}
+              />
+            ))}
+          </Box>
+        )}
+
+        {/* Empty Library State */}
+        {!isLoading && !isSearching && library.libraryItems.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <SearchIcon sx={{ fontSize: 80, color: '#333', mb: 2 }} />
+            <Typography variant="h5" sx={{ color: '#666', mb: 1 }}>
+              Your library is empty
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#999', maxWidth: 500, mx: 'auto' }}>
+              Search for movies and TV shows to add them to your library.
+              Each item gets a unique play URL you can write to an NFC tag.
+            </Typography>
+          </Box>
+        )}
+
+        {/* Snackbar */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert
+            onClose={() => setSnackbar(s => ({ ...s, open: false }))}
+            severity={snackbar.severity}
+            variant="filled"
+          >
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+
+        {/* Manual Search Dialog */}
+        <Dialog
+          open={manualDialogOpen}
+          onClose={() => setManualDialogOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{ bgcolor: '#1a1a1a', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <HelpOutlineIcon />
+              <span>Manual Search Instructions</span>
+            </Box>
+            <IconButton onClick={() => setManualDialogOpen(false)} sx={{ color: '#999' }}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ bgcolor: '#1a1a1a', color: '#fff', pt: 3 }}>
+            <Typography variant="body2" sx={{ color: '#999', mb: 3 }}>
+              Can't find what you're looking for? Search manually on your streaming services:
+            </Typography>
+            <List>
+              {channels.map((channel) => (
+                <ListItem
+                  key={channel.channelId}
+                  sx={{
+                    bgcolor: '#252525',
+                    borderRadius: 1,
+                    mb: 2,
+                    flexDirection: 'column',
+                    alignItems: 'flex-start'
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                    <Chip
+                      label={channel.channelName}
+                      size="small"
+                      sx={{
+                        bgcolor: channelColors[channel.channelName] || '#666',
+                        color: '#fff',
+                        fontWeight: 600
+                      }}
+                    />
+                  </Box>
+                  <ListItemText
+                    primary={
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: '#ccc',
+                          whiteSpace: 'pre-line',
+                          fontFamily: 'monospace',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        1. Open {channel.channelName} at: {channel.searchUrl}
+{'\n'}2. Search for the title
+{'\n'}3. Note the URL from your browser
+{'\n'}4. Paste the URL in the search box above
+                      </Typography>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          </DialogContent>
+        </Dialog>
+      </Container>
+    </Box>
+  )
+}

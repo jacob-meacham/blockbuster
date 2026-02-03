@@ -107,6 +107,28 @@ tasks.jar {
 tasks.shadowJar {
     archiveClassifier.set("")
     mergeServiceFiles()
+    dependsOn("copyFrontendDist")
+}
+
+tasks.register<Exec>("buildFrontend") {
+    group = "build"
+    description = "Build the frontend with Vite"
+    workingDir = file("frontend")
+    commandLine("npm", "run", "build")
+    // Only re-run if frontend sources changed
+    inputs.dir("frontend/src")
+    inputs.file("frontend/package.json")
+    inputs.file("frontend/index.html")
+    inputs.file("frontend/vite.config.ts")
+    outputs.dir("frontend/dist")
+}
+
+tasks.register<Copy>("copyFrontendDist") {
+    group = "build"
+    description = "Copy frontend build output into backend classpath resources"
+    dependsOn("buildFrontend")
+    from("frontend/dist")
+    into(layout.buildDirectory.dir("resources/main/frontend"))
 }
 
 tasks.register<JavaExec>("run") {

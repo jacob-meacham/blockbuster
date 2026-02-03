@@ -10,6 +10,7 @@ import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.LibraryResource
 import com.blockbuster.resource.PlayResource
 import com.blockbuster.resource.SearchResource
+import com.blockbuster.resource.FrontendResource
 import com.blockbuster.theater.DefaultTheaterHttpClient
 import com.blockbuster.theater.TheaterDeviceManager
 import com.blockbuster.theater.createTheaterHandler
@@ -28,20 +29,20 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
 
     companion object {
         private const val MASTHEAD = """
-        ╔══════════════════════════════════════════════════════════════════════════════╗
-        ║                                                                              ║
+        ╔══════════════════════════════════════════════════════════════════════════╗
+        ║                                                                          ║
         ║    ██████╗ ██╗      ██████╗  ██████╗██╗  ██╗███████╗████████╗███████╗    ║
         ║    ██╔══██╗██║     ██╔═══██╗██╔════╝██║ ██╔╝██╔════╝╚══██╔══╝██╔════╝    ║
         ║    ██████╔╝██║     ██║   ██║██║     █████╔╝ █████╗     ██║   ███████╗    ║
         ║    ██╔══██╗██║     ██║   ██║██║     ██╔═██╗ ██╔══╝     ██║   ╚════██║    ║
         ║    ██████╔╝███████╗╚██████╔╝╚██████╗██║  ██╗███████╗   ██║   ███████║    ║
         ║    ╚═════╝ ╚══════╝ ╚═════╝  ╚═════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚══════╝    ║
-        ║                                                                              ║
-        ║                        🎬 NFC Media Library System 🎵                        ║
-        ║                                                                              ║
-        ║                    Bringing Physical Media to the Digital Age                 ║
-        ║                                                                              ║
-        ╚══════════════════════════════════════════════════════════════════════════════╝
+        ║                                                                          ║
+        ║                        🎬 NFC Media Library System 🎵                    ║
+        ║                                                                          ║
+        ║                    Bringing Physical Media to the Digital Age            ║
+        ║                                                                          ║
+        ╚══════════════════════════════════════════════════════════════════════════╝
         """
 
         private val startupLogger = LoggerFactory.getLogger(BlockbusterApplication::class.java)
@@ -115,6 +116,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         environment.jersey().register(SearchResource(pluginManager))
         environment.jersey().register(LibraryResource(pluginManager, mediaStore, configuration.baseUrl))
         environment.jersey().register(PlayResource(mediaStore, pluginManager, theaterManager))
+        environment.jersey().register(FrontendResource())
 
         // Register managed objects for lifecycle management
         environment.lifecycle().manage(

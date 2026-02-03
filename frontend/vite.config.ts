@@ -3,16 +3,21 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
+  const backendPort = env.BACKEND_PORT ?? 8584
   return {
     plugins: [react()],
     base: '/',
     server: {
-      port: 8586,
+      port: env.VITE_PORT ?? 8585,
       allowedHosts: env.VITE_ALLOWED_HOSTS?.split(',') ?? [],
       proxy: {
-        '/search': 'http://localhost:8585',
-        '/library': 'http://localhost:8585',
-        '/play': 'http://localhost:8585'
+        '/search/all': `http://localhost:${backendPort}`,
+        '/search/plugins': `http://localhost:${backendPort}`,
+        '/search/channels': `http://localhost:${backendPort}`,
+        '/search/roku': `http://localhost:${backendPort}`,
+        '/library': `http://localhost:${backendPort}`,
+        '/play': `http://localhost:${backendPort}`,
+        '/health': `http://localhost:${backendPort}`,
       }
     },
     build: {
