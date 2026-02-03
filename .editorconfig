@@ -1,0 +1,5 @@
+root = true
+
+[*.{kt,kts}]
+ktlint_code_style = ktlint_official
+ij_kotlin_packages_to_use_import_on_demand = org.junit.jupiter.api.*,org.junit.jupiter.api.Assertions.*,org.mockito.*,org.mockito.kotlin.*,org.mockito.Mockito.*

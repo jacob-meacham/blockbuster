@@ -2,17 +2,17 @@ package com.blockbuster.plugin
 
 import com.blockbuster.media.MediaContent
 import com.blockbuster.media.MediaContentParser
+
 /**
  * Core interface that all media plugins must implement.
  * Provides a simple contract for media playback and plugin identification.
  */
 interface MediaPlugin<C : MediaContent> {
-    
     /**
      * Get the unique name of this plugin
      */
     fun getPluginName(): String
-    
+
     /**
      * Get a human-readable description of this plugin
      */
@@ -31,7 +31,10 @@ interface MediaPlugin<C : MediaContent> {
      * Search for media items for this plugin, returning strongly typed results.
      */
     @Throws(PluginException::class)
-    fun search(query: String, options: SearchOptions = SearchOptions()): List<SearchResult<C>>
+    fun search(
+        query: String,
+        options: SearchOptions = SearchOptions(),
+    ): List<SearchResult<C>>
 
     /**
      * Provide a parser capable of converting JSON for this plugin into the strongly-typed content.
@@ -55,5 +58,5 @@ data class SearchResult<T>(
     val title: String,
     val url: String? = null,
     val mediaUrl: String? = null,
-    val content: T
+    val content: T,
 )

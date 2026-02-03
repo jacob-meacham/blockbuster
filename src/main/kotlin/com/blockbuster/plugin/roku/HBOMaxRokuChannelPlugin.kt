@@ -18,11 +18,14 @@ package com.blockbuster.plugin.roku
  * 4. Content auto-plays
  */
 class HBOMaxRokuChannelPlugin : StreamingRokuChannelPlugin() {
-
     override fun getChannelId(): String = "61322"
+
     override fun getChannelName(): String = "HBO Max"
+
     override fun getPublicSearchDomain(): String = "max.com"
+
     override fun getSearchUrl(): String = "https://www.max.com/search"
+
     override val urlPattern = Regex("""(?:max\.com|hbomax\.com)/(?:video/watch|play)/([^/?]+)""")
     override val defaultTitle = "HBO Max Content"
     override val postLaunchKey = RokuKey.SELECT

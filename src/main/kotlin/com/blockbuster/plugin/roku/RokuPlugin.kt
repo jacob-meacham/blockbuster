@@ -7,10 +7,10 @@ import com.blockbuster.plugin.PluginException
 import com.blockbuster.plugin.SearchOptions
 import com.blockbuster.plugin.SearchResult
 import com.blockbuster.search.BraveStreamingSearchProvider
-import org.slf4j.LoggerFactory
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.slf4j.LoggerFactory
 
 /**
  * Roku plugin for controlling Roku devices via ECP (External Control Protocol).
@@ -31,10 +31,12 @@ class RokuPlugin(
     private val mediaStore: MediaStore,
     private val httpClient: OkHttpClient,
     private val channelPlugins: Map<String, RokuChannelPlugin> = emptyMap(),
-    braveSearchApiKey: String? = null
+    braveSearchApiKey: String? = null,
 ) : MediaPlugin<RokuMediaContent> {
-
     companion object {
+        /** Standard Roku ECP (External Control Protocol) port. */
+        const val ECP_PORT = 8060
+
         /**
          * Delay between individual character keypresses when typing text.
          * Roku devices need time to process each character input.
@@ -51,35 +53,38 @@ class RokuPlugin(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     // Initialize Brave Search provider if API key is provided
-    private val braveSearchProvider: BraveStreamingSearchProvider? = if (!braveSearchApiKey.isNullOrBlank()) {
-        logger.info("Brave Search enabled for Roku plugin with ${channelPlugins.size} channels")
-        BraveStreamingSearchProvider(
-            apiKey = braveSearchApiKey,
-            httpClient = httpClient,
-            channelPlugins = channelPlugins.values
-        )
-    } else {
-        logger.debug("Brave Search disabled for Roku plugin")
-        null
-    }
+    private val braveSearchProvider: BraveStreamingSearchProvider? =
+        if (!braveSearchApiKey.isNullOrBlank()) {
+            logger.info("Brave Search enabled for Roku plugin with {} channels", channelPlugins.size)
+            BraveStreamingSearchProvider(
+                apiKey = braveSearchApiKey,
+                httpClient = httpClient,
+                channelPlugins = channelPlugins.values,
+            )
+        } else {
+            logger.debug("Brave Search disabled for Roku plugin")
+            null
+        }
 
     override fun getPluginName(): String = "roku"
 
-    override fun getDescription(): String = "Controls Roku devices via ECP protocol"
+    override fun getDescription(): String = "$deviceName - Controls Roku devices via ECP protocol"
 
     override fun getContentParser() = RokuMediaContent.Parser
 
     @Throws(PluginException::class)
     override fun play(contentId: String) {
         try {
-            val content = mediaStore.getParsed(contentId, getPluginName(), RokuMediaContent.Parser)
-                ?: throw PluginException("Content not found in media store: $contentId")
+            val content =
+                mediaStore.getParsed(contentId, getPluginName(), RokuMediaContent.Parser)
+                    ?: throw PluginException("Content not found in media store: $contentId")
 
             logger.info("Playing content: {} on channel: {} ({})", content.title, content.channelName, content.channelId)
 
             // Get the channel plugin for this content
-            val channelPlugin = channelPlugins[content.channelId]
-                ?: throw PluginException("No channel plugin registered for channel ID: ${content.channelId}")
+            val channelPlugin =
+                channelPlugins[content.channelId]
+                    ?: throw PluginException("No channel plugin registered for channel ID: ${content.channelId}")
 
             // Build playback command (deep link or action sequence)
             val command = channelPlugin.buildPlaybackCommand(content, deviceIp)
@@ -88,9 +93,10 @@ class RokuPlugin(
             executePlaybackCommand(command)
 
             logger.info("✅ Successfully initiated playback: {}", content.title)
-
+        } catch (e: PluginException) {
+            throw e
         } catch (e: Exception) {
-            logger.error("Failed to execute Roku command '$contentId': ${e.message}", e)
+            logger.error("Failed to execute Roku command '{}': {}", contentId, e.message, e)
             throw PluginException("Failed to execute Roku command: ${e.message}", e)
         }
     }
@@ -120,11 +126,12 @@ class RokuPlugin(
 
             when (action) {
                 is RokuAction.Launch -> {
-                    val url = if (action.params.isNotEmpty()) {
-                        "http://$deviceIp:8060/launch/${action.channelId}?${action.params}"
-                    } else {
-                        "http://$deviceIp:8060/launch/${action.channelId}"
-                    }
+                    val url =
+                        if (action.params.isNotEmpty()) {
+                            "http://$deviceIp:$ECP_PORT/launch/${action.channelId}?${action.params}"
+                        } else {
+                            "http://$deviceIp:$ECP_PORT/launch/${action.channelId}"
+                        }
                     sendEcpRequest(url, "POST")
                 }
                 is RokuAction.Press -> {
@@ -136,7 +143,12 @@ class RokuPlugin(
                     typeText(action.text)
                 }
                 is RokuAction.Wait -> {
-                    Thread.sleep(action.milliseconds)
+                    try {
+                        Thread.sleep(action.milliseconds)
+                    } catch (e: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        throw PluginException("Action sequence interrupted", e)
+                    }
                 }
             }
         }
@@ -147,19 +159,25 @@ class RokuPlugin(
      */
     private fun typeText(text: String) {
         text.forEach { char ->
-            val litCode = when {
-                char.isLetter() -> "Lit_${char.uppercaseChar()}"
-                char.isDigit() -> "Lit_$char"
-                char == ' ' -> "Lit_%20"
-                else -> {
-                    logger.warn("Unsupported character for typing: {}", char)
-                    return@forEach
+            val litCode =
+                when {
+                    char.isLetter() -> "Lit_${char.uppercaseChar()}"
+                    char.isDigit() -> "Lit_$char"
+                    char == ' ' -> "Lit_%20"
+                    else -> {
+                        logger.warn("Unsupported character for typing: {}", char)
+                        return@forEach
+                    }
                 }
-            }
 
-            val url = "http://$deviceIp:8060/keypress/$litCode"
+            val url = "http://$deviceIp:$ECP_PORT/keypress/$litCode"
             sendEcpRequest(url, "POST")
-            Thread.sleep(CHAR_DELAY_MS)  // Small delay between characters
+            try {
+                Thread.sleep(CHAR_DELAY_MS)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw PluginException("Text input interrupted", e)
+            }
         }
     }
 
@@ -167,41 +185,50 @@ class RokuPlugin(
      * Sends a key press to the Roku device
      */
     private fun sendKeyPress(key: RokuKey) {
-        val keyName = when (key) {
-            RokuKey.HOME -> "Home"
-            RokuKey.UP -> "Up"
-            RokuKey.DOWN -> "Down"
-            RokuKey.LEFT -> "Left"
-            RokuKey.RIGHT -> "Right"
-            RokuKey.SELECT -> "Select"
-            RokuKey.BACK -> "Back"
-            RokuKey.BACKSPACE -> "Backspace"
-            RokuKey.PLAY -> "Play"
-            RokuKey.PAUSE -> "Pause"
-            RokuKey.REV -> "Rev"
-            RokuKey.FWD -> "Fwd"
-            RokuKey.INSTANT_REPLAY -> "InstantReplay"
-            RokuKey.INFO -> "Info"
-            RokuKey.SEARCH -> "Search"
-        }
+        val keyName =
+            when (key) {
+                RokuKey.HOME -> "Home"
+                RokuKey.UP -> "Up"
+                RokuKey.DOWN -> "Down"
+                RokuKey.LEFT -> "Left"
+                RokuKey.RIGHT -> "Right"
+                RokuKey.SELECT -> "Select"
+                RokuKey.BACK -> "Back"
+                RokuKey.BACKSPACE -> "Backspace"
+                RokuKey.PLAY -> "Play"
+                RokuKey.PAUSE -> "Pause"
+                RokuKey.REV -> "Rev"
+                RokuKey.FWD -> "Fwd"
+                RokuKey.INSTANT_REPLAY -> "InstantReplay"
+                RokuKey.INFO -> "Info"
+                RokuKey.SEARCH -> "Search"
+            }
 
-        val url = "http://$deviceIp:8060/keypress/$keyName"
+        val url = "http://$deviceIp:$ECP_PORT/keypress/$keyName"
         sendEcpRequest(url, "POST")
-        Thread.sleep(KEYPRESS_DELAY_MS)  // Small delay between keypresses
+        try {
+            Thread.sleep(KEYPRESS_DELAY_MS)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            throw PluginException("Keypress sequence interrupted", e)
+        }
     }
 
     /**
      * Gets device information from Roku
      */
     fun getDeviceInfo(): String? {
-        val url = "http://$deviceIp:8060/query/device-info"
+        val url = "http://$deviceIp:$ECP_PORT/query/device-info"
         return sendEcpRequest(url, "GET")
     }
 
     /**
      * Sends an ECP request to the Roku device
      */
-    private fun sendEcpRequest(urlString: String, method: String): String? {
+    private fun sendEcpRequest(
+        urlString: String,
+        method: String,
+    ): String? {
         return try {
             val requestBuilder = Request.Builder().url(urlString)
 
@@ -212,27 +239,32 @@ class RokuPlugin(
             }
 
             val request = requestBuilder.build()
-            val response = httpClient.newCall(request).execute()
+            httpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
 
-            val responseBody = response.body?.string()
-
-            if (response.isSuccessful) {
-                logger.debug("ECP request successful: $urlString")
-                responseBody
-            } else {
-                logger.error("ECP request failed: $urlString, response code: ${response.code}")
-                throw PluginException("ECP request failed with response code: ${response.code}")
+                if (response.isSuccessful) {
+                    logger.debug("ECP request successful: {}", urlString)
+                    responseBody
+                } else {
+                    logger.error("ECP request failed: {}, response code: {}", urlString, response.code)
+                    throw PluginException("ECP request failed with response code: ${response.code}")
+                }
             }
+        } catch (e: PluginException) {
+            throw e
         } catch (e: Exception) {
-            logger.error("Failed to send ECP request to $urlString: ${e.message}", e)
+            logger.error("Failed to send ECP request to {}: {}", urlString, e.message, e)
             throw PluginException("Failed to send ECP request: ${e.message}", e)
         }
     }
 
     @Throws(PluginException::class)
-    override fun search(query: String, options: SearchOptions): List<SearchResult<RokuMediaContent>> {
+    override fun search(
+        query: String,
+        options: SearchOptions,
+    ): List<SearchResult<RokuMediaContent>> {
         try {
-            logger.info("Searching for '$query' across {} channel(s)", channelPlugins.size)
+            logger.info("Searching for '{}' across {} channel(s)", query, channelPlugins.size)
 
             val allResults = mutableListOf<SearchResult<RokuMediaContent>>()
 
@@ -241,16 +273,18 @@ class RokuPlugin(
                 try {
                     val braveResults = braveSearch.searchStreaming(query, options.limit)
                     logger.info("Brave Search returned {} results", braveResults.size)
-                    allResults.addAll(braveResults.map { content ->
-                        SearchResult(
-                            title = content.title ?: "Unknown",
-                            url = content.metadata?.searchUrl,
-                            mediaUrl = null,
-                            content = content
-                        )
-                    })
+                    allResults.addAll(
+                        braveResults.map { content ->
+                            SearchResult(
+                                title = content.title ?: "Unknown",
+                                url = content.metadata?.searchUrl,
+                                mediaUrl = null,
+                                content = content,
+                            )
+                        },
+                    )
                 } catch (e: Exception) {
-                    logger.warn("Brave Search failed: ${e.message}")
+                    logger.warn("Brave Search failed: {}", e.message)
                 }
             }
 
@@ -259,14 +293,16 @@ class RokuPlugin(
                 try {
                     val results = channelPlugin.search(query)
                     logger.debug("Channel '{}' returned {} results", channelPlugin.getChannelName(), results.size)
-                    allResults.addAll(results.map { content ->
-                        SearchResult(
-                            title = content.title ?: "Unknown",
-                            url = null,
-                            mediaUrl = null,
-                            content = content
-                        )
-                    })
+                    allResults.addAll(
+                        results.map { content ->
+                            SearchResult(
+                                title = content.title ?: "Unknown",
+                                url = null,
+                                mediaUrl = null,
+                                content = content,
+                            )
+                        },
+                    )
                 } catch (e: Exception) {
                     logger.warn("Channel '{}' search failed: {}", channelPlugin.getChannelName(), e.message)
                 }
@@ -275,11 +311,10 @@ class RokuPlugin(
             // Deduplicate by channel + contentId
             val dedupResults = allResults.distinctBy { it.content.channelId to it.content.contentId }
 
-            logger.info("Found {} total search results for query '$query'", dedupResults.size)
+            logger.info("Found {} total search results for query '{}'", dedupResults.size, query)
             return dedupResults
-
         } catch (e: Exception) {
-            logger.error("Search failed for query '$query': ${e.message}", e)
+            logger.error("Search failed for query '{}': {}", query, e.message, e)
             throw PluginException("Search failed: ${e.message}", e)
         }
     }

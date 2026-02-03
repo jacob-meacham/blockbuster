@@ -6,22 +6,23 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
 
 class TheaterDeviceManagerTest {
-
     @Test
     fun `setupTheater with unknown deviceId throws IllegalArgumentException`() {
         val manager = TheaterDeviceManager(emptyMap())
 
-        val exception = assertThrows<IllegalArgumentException> {
-            manager.setupTheater("unknown-device")
-        }
+        val exception =
+            assertThrows<IllegalArgumentException> {
+                manager.setupTheater("unknown-device")
+            }
         assertTrue(exception.message?.contains("Unknown device") == true)
     }
 
     @Test
     fun `setupTheater with null handler does nothing`() {
-        val manager = TheaterDeviceManager(
-            mapOf("test-device" to null)
-        )
+        val manager =
+            TheaterDeviceManager(
+                mapOf("test-device" to null),
+            )
 
         manager.setupTheater("test-device")
     }
@@ -29,9 +30,10 @@ class TheaterDeviceManagerTest {
     @Test
     fun `setupTheater delegates to handler`() {
         val mockHandler = mock<TheaterDeviceHandler>()
-        val manager = TheaterDeviceManager(
-            mapOf("living-room" to mockHandler)
-        )
+        val manager =
+            TheaterDeviceManager(
+                mapOf("living-room" to mockHandler),
+            )
 
         manager.setupTheater("living-room")
 
@@ -40,12 +42,14 @@ class TheaterDeviceManagerTest {
 
     @Test
     fun `setupTheater propagates handler exceptions`() {
-        val mockHandler = mock<TheaterDeviceHandler> {
-            on { setup() } doThrow TheaterSetupException("TestDevice", "HTTP 500: error")
-        }
-        val manager = TheaterDeviceManager(
-            mapOf("living-room" to mockHandler)
-        )
+        val mockHandler =
+            mock<TheaterDeviceHandler> {
+                on { setup() } doThrow TheaterSetupException("TestDevice", "HTTP 500: error")
+            }
+        val manager =
+            TheaterDeviceManager(
+                mapOf("living-room" to mockHandler),
+            )
 
         assertThrows<TheaterSetupException> {
             manager.setupTheater("living-room")
@@ -55,12 +59,13 @@ class TheaterDeviceManagerTest {
     @Test
     fun `multiple appliances route independently`() {
         val handlerA = mock<TheaterDeviceHandler>()
-        val manager = TheaterDeviceManager(
-            mapOf(
-                "living-room" to handlerA,
-                "kitchen" to null
+        val manager =
+            TheaterDeviceManager(
+                mapOf(
+                    "living-room" to handlerA,
+                    "kitchen" to null,
+                ),
             )
-        )
 
         // Null handler: no interaction
         manager.setupTheater("kitchen")

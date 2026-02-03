@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
 class SearchResourceTest {
-
     private lateinit var pluginManager: MediaPluginManager
     private lateinit var searchResource: SearchResource
 
@@ -46,23 +45,26 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "81444554",
-            title = "Inception",
-            mediaType = "movie",
-            metadata = RokuMediaMetadata(
-                description = "A mind-bending thriller",
-                imageUrl = "http://example.com/inception.jpg"
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "81444554",
+                title = "Inception",
+                mediaType = "movie",
+                metadata =
+                    RokuMediaMetadata(
+                        description = "A mind-bending thriller",
+                        imageUrl = "http://example.com/inception.jpg",
+                    ),
             )
-        )
-        val searchResult = SearchResult(
-            title = "Inception",
-            url = null,
-            mediaUrl = null,
-            content = content
-        )
+        val searchResult =
+            SearchResult(
+                title = "Inception",
+                url = null,
+                mediaUrl = null,
+                content = content,
+            )
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(listOf(searchResult))
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -101,15 +103,16 @@ class SearchResourceTest {
         val otherPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(otherPlugin.getPluginName()).thenReturn("spotify")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "12345",
-            title = "Test Movie",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "12345",
+                title = "Test Movie",
+                mediaType = "movie",
+            )
         whenever(rokuPlugin.search(eq("test"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Test Movie", content = content))
+            listOf(SearchResult(title = "Test Movie", content = content)),
         )
 
         whenever(pluginManager.getPlugin("roku")).thenReturn(rokuPlugin)
@@ -125,6 +128,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -140,27 +144,29 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content1 = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "81444554",
-            title = "Inception (from Brave)",
-            mediaType = "movie",
-            metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554")
-        )
-        val content2 = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "81444554",
-            title = "Inception (from channel)",
-            mediaType = "movie"
-        )
+        val content1 =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "81444554",
+                title = "Inception (from Brave)",
+                mediaType = "movie",
+                metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554"),
+            )
+        val content2 =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "81444554",
+                title = "Inception (from channel)",
+                mediaType = "movie",
+            )
 
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(
             listOf(
                 SearchResult(title = "Inception (from Brave)", url = "https://netflix.com/title/81444554", content = content1),
-                SearchResult(title = "Inception (from channel)", url = null, content = content2)
-            )
+                SearchResult(title = "Inception (from channel)", url = null, content = content2),
+            ),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -172,6 +178,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -187,15 +194,16 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "12345",
-            title = "Some Movie",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "12345",
+                title = "Some Movie",
+                mediaType = "movie",
+            )
         whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Some Movie", content = content))
+            listOf(SearchResult(title = "Some Movie", content = content)),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -207,6 +215,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -236,6 +245,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -249,15 +259,16 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("spotify")
 
-        val content = RokuMediaContent(
-            channelName = "Spotify",
-            channelId = "spotify-1",
-            contentId = "track-123",
-            title = "Some Song",
-            mediaType = "music"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Spotify",
+                channelId = "spotify-1",
+                contentId = "track-123",
+                title = "Some Song",
+                mediaType = "music",
+            )
         whenever(mockPlugin.search(eq("song"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Some Song", content = content))
+            listOf(SearchResult(title = "Some Song", content = content)),
         )
         whenever(pluginManager.getPlugin("spotify")).thenReturn(mockPlugin)
 
@@ -269,6 +280,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -287,15 +299,16 @@ class SearchResourceTest {
         val workingPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(workingPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "99999",
-            title = "Working Result",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "99999",
+                title = "Working Result",
+                mediaType = "movie",
+            )
         whenever(workingPlugin.search(eq("test"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Working Result", content = content))
+            listOf(SearchResult(title = "Working Result", content = content)),
         )
 
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(failingPlugin, workingPlugin))
@@ -308,6 +321,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -323,16 +337,17 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "81444554",
-            title = "Inception",
-            mediaType = "movie",
-            metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554")
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "81444554",
+                title = "Inception",
+                mediaType = "movie",
+                metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554"),
+            )
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Inception", url = "https://netflix.com/title/81444554", content = content))
+            listOf(SearchResult(title = "Inception", url = "https://netflix.com/title/81444554", content = content)),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -342,6 +357,7 @@ class SearchResourceTest {
         // Then
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -354,15 +370,16 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Local Movie",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Local Movie",
+                mediaType = "movie",
+            )
         whenever(mockPlugin.search(eq("local"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Local Movie", url = null, content = content))
+            listOf(SearchResult(title = "Local Movie", url = null, content = content)),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -372,6 +389,7 @@ class SearchResourceTest {
         // Then
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -384,19 +402,21 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Movie With Overview",
-            mediaType = "movie",
-            metadata = RokuMediaMetadata(
-                description = null,
-                overview = "This is the overview text"
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Movie With Overview",
+                mediaType = "movie",
+                metadata =
+                    RokuMediaMetadata(
+                        description = null,
+                        overview = "This is the overview text",
+                    ),
             )
-        )
         whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Movie With Overview", content = content))
+            listOf(SearchResult(title = "Movie With Overview", content = content)),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -406,6 +426,7 @@ class SearchResourceTest {
         // Then
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val results = body["results"] as List<Map<String, Any?>>
 
@@ -418,18 +439,20 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val results = (1..10).map { i ->
-            SearchResult(
-                title = "Movie $i",
-                content = RokuMediaContent(
-                    channelName = "Netflix",
-                    channelId = "12",
-                    contentId = "id-$i",
+        val results =
+            (1..10).map { i ->
+                SearchResult(
                     title = "Movie $i",
-                    mediaType = "movie"
+                    content =
+                        RokuMediaContent(
+                            channelName = "Netflix",
+                            channelId = "12",
+                            contentId = "id-$i",
+                            title = "Movie $i",
+                            mediaType = "movie",
+                        ),
                 )
-            )
-        }
+            }
         whenever(mockPlugin.search(eq("movies"), any<SearchOptions>())).thenReturn(results)
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -441,6 +464,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val resultsList = body["results"] as List<Map<String, Any?>>
 
@@ -460,15 +484,16 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "123",
-            title = "Movie",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "123",
+                title = "Movie",
+                mediaType = "movie",
+            )
         whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Movie", content = content))
+            listOf(SearchResult(title = "Movie", content = content)),
         )
         whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
 
@@ -517,13 +542,14 @@ class SearchResourceTest {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
-        val content = RokuMediaContent(
-            channelName = "Netflix",
-            channelId = "12",
-            contentId = "81444554",
-            title = "Inception",
-            mediaType = "movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Netflix",
+                channelId = "12",
+                contentId = "81444554",
+                title = "Inception",
+                mediaType = "movie",
+            )
         val searchResult = SearchResult(title = "Inception", content = content)
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(listOf(searchResult))
         whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
@@ -585,6 +611,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val plugins = body["plugins"] as List<Map<String, Any?>>
 
@@ -605,6 +632,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val plugins = body["plugins"] as List<Map<String, Any?>>
 
@@ -641,6 +669,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val channels = body["channels"] as List<Map<String, Any?>>
 
@@ -665,6 +694,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val channels = body["channels"] as List<Map<String, Any?>>
 
@@ -685,6 +715,7 @@ class SearchResourceTest {
 
         @Suppress("UNCHECKED_CAST")
         val body = response.entity as Map<String, Any?>
+
         @Suppress("UNCHECKED_CAST")
         val channels = body["channels"] as List<Map<String, Any?>>
 

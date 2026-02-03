@@ -1,8 +1,8 @@
 package com.blockbuster.plugin.roku
 
 import com.blockbuster.media.RokuMediaContent
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 /**
  * Abstract base test for streaming Roku channel plugins.
@@ -11,7 +11,6 @@ import org.junit.jupiter.api.Assertions.*
  * Subclasses provide channel-specific test values and add URL extraction tests.
  */
 abstract class StreamingRokuChannelPluginTest {
-
     abstract val plugin: StreamingRokuChannelPlugin
     abstract val expectedChannelId: String
     abstract val expectedChannelName: String
@@ -30,12 +29,13 @@ abstract class StreamingRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should create ActionSequence with correct structure`() {
-        val content = RokuMediaContent(
-            channelId = expectedChannelId,
-            contentId = sampleContentId,
-            mediaType = "movie",
-            title = "Test Movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelId = expectedChannelId,
+                contentId = sampleContentId,
+                mediaType = "movie",
+                title = "Test Movie",
+            )
 
         val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
 
@@ -57,12 +57,13 @@ abstract class StreamingRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should handle episode mediaType`() {
-        val content = RokuMediaContent(
-            channelId = expectedChannelId,
-            contentId = sampleContentId,
-            mediaType = "episode",
-            title = "Test Episode"
-        )
+        val content =
+            RokuMediaContent(
+                channelId = expectedChannelId,
+                contentId = sampleContentId,
+                mediaType = "episode",
+                title = "Test Episode",
+            )
 
         val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
@@ -72,12 +73,13 @@ abstract class StreamingRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should default to movie when mediaType is null`() {
-        val content = RokuMediaContent(
-            channelId = expectedChannelId,
-            contentId = sampleContentId,
-            mediaType = null,
-            title = "Test Content"
-        )
+        val content =
+            RokuMediaContent(
+                channelId = expectedChannelId,
+                contentId = sampleContentId,
+                mediaType = null,
+                title = "Test Content",
+            )
 
         val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
@@ -87,12 +89,13 @@ abstract class StreamingRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should handle uppercase mediaType`() {
-        val content = RokuMediaContent(
-            channelId = expectedChannelId,
-            contentId = sampleContentId,
-            mediaType = "SERIES",
-            title = "Test Series"
-        )
+        val content =
+            RokuMediaContent(
+                channelId = expectedChannelId,
+                contentId = sampleContentId,
+                mediaType = "SERIES",
+                title = "Test Series",
+            )
 
         val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
         val actionSequence = command as RokuPlaybackCommand.ActionSequence

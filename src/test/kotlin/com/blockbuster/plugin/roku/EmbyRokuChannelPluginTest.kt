@@ -16,7 +16,6 @@ import org.mockito.kotlin.*
 import java.io.IOException
 
 class EmbyRokuChannelPluginTest {
-
     private lateinit var httpClient: OkHttpClient
     private lateinit var objectMapper: ObjectMapper
     private lateinit var plugin: EmbyRokuChannelPlugin
@@ -30,13 +29,14 @@ class EmbyRokuChannelPluginTest {
     fun setUp() {
         httpClient = mock()
         objectMapper = ObjectMapper().registerModule(kotlinModule())
-        plugin = EmbyRokuChannelPlugin(
-            embyServerUrl = embyServerUrl,
-            embyApiKey = embyApiKey,
-            embyUserId = embyUserId,
-            httpClient = httpClient,
-            objectMapper = objectMapper
-        )
+        plugin =
+            EmbyRokuChannelPlugin(
+                embyServerUrl = embyServerUrl,
+                embyApiKey = embyApiKey,
+                embyUserId = embyUserId,
+                httpClient = httpClient,
+                objectMapper = objectMapper,
+            )
     }
 
     @Test
@@ -56,13 +56,14 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should return DeepLink with correct format`() {
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Test Movie",
-            mediaType = "Movie"
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Test Movie",
+                mediaType = "Movie",
+            )
 
         val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
 
@@ -70,22 +71,24 @@ class EmbyRokuChannelPluginTest {
         val deepLink = command as RokuPlaybackCommand.DeepLink
         assertEquals(
             "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541",
-            deepLink.url
+            deepLink.url,
         )
     }
 
     @Test
     fun `buildPlaybackCommand should include StartPositionTicks when resume position is set`() {
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Test Movie",
-            mediaType = "Movie",
-            metadata = RokuMediaMetadata(
-                resumePositionTicks = 36000000000L
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Test Movie",
+                mediaType = "Movie",
+                metadata =
+                    RokuMediaMetadata(
+                        resumePositionTicks = 36000000000L,
+                    ),
             )
-        )
 
         val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
 
@@ -93,22 +96,24 @@ class EmbyRokuChannelPluginTest {
         val deepLink = command as RokuPlaybackCommand.DeepLink
         assertEquals(
             "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541&StartPositionTicks=36000000000",
-            deepLink.url
+            deepLink.url,
         )
     }
 
     @Test
     fun `buildPlaybackCommand should not include StartPositionTicks when resume position is null`() {
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Test Movie",
-            mediaType = "Movie",
-            metadata = RokuMediaMetadata(
-                resumePositionTicks = null
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Test Movie",
+                mediaType = "Movie",
+                metadata =
+                    RokuMediaMetadata(
+                        resumePositionTicks = null,
+                    ),
             )
-        )
 
         val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
 
@@ -117,22 +122,24 @@ class EmbyRokuChannelPluginTest {
         assertFalse(deepLink.url.contains("StartPositionTicks"))
         assertEquals(
             "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541",
-            deepLink.url
+            deepLink.url,
         )
     }
 
     @Test
     fun `buildPlaybackCommand should not include StartPositionTicks when resume position is zero`() {
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Test Movie",
-            mediaType = "Movie",
-            metadata = RokuMediaMetadata(
-                resumePositionTicks = 0L
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Test Movie",
+                mediaType = "Movie",
+                metadata =
+                    RokuMediaMetadata(
+                        resumePositionTicks = 0L,
+                    ),
             )
-        )
 
         val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
 
@@ -143,14 +150,15 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `buildPlaybackCommand should not include StartPositionTicks when metadata is null`() {
-        val content = RokuMediaContent(
-            channelName = "Emby",
-            channelId = "44191",
-            contentId = "541",
-            title = "Test Movie",
-            mediaType = "Movie",
-            metadata = null
-        )
+        val content =
+            RokuMediaContent(
+                channelName = "Emby",
+                channelId = "44191",
+                contentId = "541",
+                title = "Test Movie",
+                mediaType = "Movie",
+                metadata = null,
+            )
 
         val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
 
@@ -161,7 +169,8 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should return parsed results on success`() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
                 "Items": [
                     {
@@ -174,16 +183,18 @@ class EmbyRokuChannelPluginTest {
                 ],
                 "TotalRecordCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         val results = plugin.search("Test Movie")
@@ -203,7 +214,8 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should return parsed results with episode format`() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
                 "Items": [
                     {
@@ -219,16 +231,18 @@ class EmbyRokuChannelPluginTest {
                 ],
                 "TotalRecordCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         val results = plugin.search("Breaking Bad")
@@ -244,33 +258,38 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should throw IOException on HTTP failure`() {
-        val response = mock<Response> {
-            on { isSuccessful } doReturn false
-            on { code } doReturn 500
-            on { message } doReturn "Internal Server Error"
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn false
+                on { code } doReturn 500
+                on { message } doReturn "Internal Server Error"
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
-        val exception = assertThrows(IOException::class.java) {
-            plugin.search("test query")
-        }
+        val exception =
+            assertThrows(IOException::class.java) {
+                plugin.search("test query")
+            }
         assertTrue(exception.message!!.contains("Emby search failed"))
         assertTrue(exception.message!!.contains("500"))
     }
 
     @Test
     fun `search should throw IOException on network error`() {
-        val call = mock<Call> {
-            on { execute() } doThrow IOException("Connection refused")
-        }
+        val call =
+            mock<Call> {
+                on { execute() } doThrow IOException("Connection refused")
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
-        val exception = assertThrows(IOException::class.java) {
-            plugin.search("test query")
-        }
+        val exception =
+            assertThrows(IOException::class.java) {
+                plugin.search("test query")
+            }
         assertEquals("Connection refused", exception.message)
     }
 
@@ -278,13 +297,15 @@ class EmbyRokuChannelPluginTest {
     fun `search should build correct request URL and headers`() {
         val jsonResponse = """{"Items": [], "TotalRecordCount": 0}"""
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         plugin.search("test query")
@@ -295,7 +316,9 @@ class EmbyRokuChannelPluginTest {
         val capturedRequest = requestCaptor.firstValue
         val url = capturedRequest.url.toString()
         assertTrue(url.startsWith("$embyServerUrl/Users/$embyUserId/Items?"))
-        assertTrue(url.contains("searchTerm=test%20query") || url.contains("searchTerm=test+query") || url.contains("searchTerm=test query"))
+        assertTrue(
+            url.contains("searchTerm=test%20query") || url.contains("searchTerm=test+query") || url.contains("searchTerm=test query"),
+        )
         assertTrue(url.contains("recursive=true"))
         assertTrue(url.contains("includeItemTypes=Movie,Episode") || url.contains("includeItemTypes=Movie%2CEpisode"))
         assertEquals(embyApiKey, capturedRequest.header("X-Emby-Token"))
@@ -303,7 +326,8 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should populate metadata fields from full Emby response`() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
                 "Items": [
                     {
@@ -328,16 +352,18 @@ class EmbyRokuChannelPluginTest {
                 ],
                 "TotalRecordCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         val results = plugin.search("Inception")
@@ -360,7 +386,8 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should handle movie without production year in title`() {
-        val jsonResponse = """
+        val jsonResponse =
+            """
             {
                 "Items": [
                     {
@@ -372,16 +399,18 @@ class EmbyRokuChannelPluginTest {
                 ],
                 "TotalRecordCount": 1
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         val results = plugin.search("Unknown")
@@ -394,13 +423,15 @@ class EmbyRokuChannelPluginTest {
     fun `search should handle empty results`() {
         val jsonResponse = """{"Items": [], "TotalRecordCount": 0}"""
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn responseBody
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
         val results = plugin.search("nonexistent")
@@ -410,18 +441,21 @@ class EmbyRokuChannelPluginTest {
 
     @Test
     fun `search should throw IOException when response body is null`() {
-        val response = mock<Response> {
-            on { isSuccessful } doReturn true
-            on { body } doReturn null
-        }
-        val call = mock<Call> {
-            on { execute() } doReturn response
-        }
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn null
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
         whenever(httpClient.newCall(any())).thenReturn(call)
 
-        val exception = assertThrows(IOException::class.java) {
-            plugin.search("test query")
-        }
+        val exception =
+            assertThrows(IOException::class.java) {
+                plugin.search("test query")
+            }
         assertTrue(exception.message!!.contains("Empty response body"))
     }
 

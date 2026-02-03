@@ -16,16 +16,22 @@ import com.blockbuster.media.RokuMediaContent
  * 2. PLAY press starts playback
  */
 class NetflixRokuChannelPlugin : StreamingRokuChannelPlugin() {
-
     override fun getChannelId(): String = "12"
+
     override fun getChannelName(): String = "Netflix"
+
     override fun getPublicSearchDomain(): String = "netflix.com"
+
     override fun getSearchUrl(): String = "https://www.netflix.com/search"
+
     override val urlPattern = Regex("""netflix\.com/(?:watch|title)/(\d+)""")
     override val defaultTitle = "Netflix Content"
     override val postLaunchKey = RokuKey.PLAY
 
-    override fun buildContentFromMatch(match: MatchResult, url: String): RokuMediaContent {
+    override fun buildContentFromMatch(
+        match: MatchResult,
+        url: String,
+    ): RokuMediaContent {
         val contentId = match.groupValues[1]
         val mediaType = if (url.contains("/watch/")) "movie" else "series"
 
@@ -34,7 +40,7 @@ class NetflixRokuChannelPlugin : StreamingRokuChannelPlugin() {
             channelId = getChannelId(),
             contentId = contentId,
             title = defaultTitle,
-            mediaType = mediaType
+            mediaType = mediaType,
         )
     }
 }

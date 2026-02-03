@@ -1,10 +1,9 @@
 package com.blockbuster.plugin.roku
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class HBOMaxRokuChannelPluginTest : StreamingRokuChannelPluginTest() {
-
     override val plugin = HBOMaxRokuChannelPlugin()
     override val expectedChannelId = "61322"
     override val expectedChannelName = "HBO Max"

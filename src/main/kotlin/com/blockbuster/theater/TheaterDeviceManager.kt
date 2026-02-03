@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory
  *   Null values represent devices with no theater setup (e.g., [TheaterDevice.None]).
  */
 class TheaterDeviceManager(
-    private val handlers: Map<String, TheaterDeviceHandler?>
+    private val handlers: Map<String, TheaterDeviceHandler?>,
 ) {
     private val logger = LoggerFactory.getLogger(TheaterDeviceManager::class.java)
 
@@ -24,9 +24,7 @@ class TheaterDeviceManager(
      * @throws TheaterSetupException if the device setup fails
      */
     fun setupTheater(deviceId: String) {
-        if (!handlers.containsKey(deviceId)) {
-            throw IllegalArgumentException("Unknown device: $deviceId")
-        }
+        require(handlers.containsKey(deviceId)) { "Unknown device: $deviceId" }
 
         val handler = handlers[deviceId]
         if (handler == null) {

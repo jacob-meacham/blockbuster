@@ -39,7 +39,10 @@ interface RokuChannelPlugin {
      * Builds the playback command for this channel.
      * Returns either a deep link URL or an action sequence.
      */
-    fun buildPlaybackCommand(content: RokuMediaContent, rokuDeviceIp: String): RokuPlaybackCommand
+    fun buildPlaybackCommand(
+        content: RokuMediaContent,
+        rokuDeviceIp: String,
+    ): RokuPlaybackCommand
 
     /**
      * Search for content on this channel.
@@ -84,8 +87,11 @@ sealed class RokuPlaybackCommand {
  */
 sealed class RokuAction {
     data class Launch(val channelId: String, val params: String = "") : RokuAction()
+
     data class Press(val key: RokuKey, val count: Int = 1) : RokuAction()
+
     data class Type(val text: String) : RokuAction()
+
     data class Wait(val milliseconds: Long) : RokuAction()
 }
 
@@ -93,7 +99,19 @@ sealed class RokuAction {
  * Roku remote control keys
  */
 enum class RokuKey {
-    HOME, UP, DOWN, LEFT, RIGHT, SELECT, BACK, BACKSPACE,
-    PLAY, PAUSE, REV, FWD,
-    INSTANT_REPLAY, INFO, SEARCH
+    HOME,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    SELECT,
+    BACK,
+    BACKSPACE,
+    PLAY,
+    PAUSE,
+    REV,
+    FWD,
+    INSTANT_REPLAY,
+    INFO,
+    SEARCH,
 }

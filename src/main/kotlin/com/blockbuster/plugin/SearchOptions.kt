@@ -5,7 +5,7 @@ package com.blockbuster.plugin
  */
 data class SearchOptions(
     val limit: Int = DEFAULT_SEARCH_LIMIT,
-    val offset: Int = 0
+    val offset: Int = 0,
 ) {
     companion object {
         const val DEFAULT_SEARCH_LIMIT = 20

@@ -25,32 +25,35 @@ class EmbyRokuChannelPlugin(
     private val embyApiKey: String,
     private val embyUserId: String,
     private val httpClient: OkHttpClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : RokuChannelPlugin {
-
     companion object {
         private val logger = LoggerFactory.getLogger(EmbyRokuChannelPlugin::class.java)
         private const val SEARCH_LIMIT = 50
     }
 
-    override fun getChannelId(): String = "44191"  // Emby for Roku channel ID
+    override fun getChannelId(): String = "44191" // Emby for Roku channel ID
 
     override fun getChannelName(): String = "Emby"
 
-    override fun getPublicSearchDomain(): String = ""  // Private server, not for public web search
+    override fun getPublicSearchDomain(): String = "" // Private server, not for public web search
 
     override fun getSearchUrl(): String = "$embyServerUrl/web/index.html#!/search.html"
 
-    override fun buildPlaybackCommand(content: RokuMediaContent, rokuDeviceIp: String): RokuPlaybackCommand {
+    override fun buildPlaybackCommand(
+        content: RokuMediaContent,
+        rokuDeviceIp: String,
+    ): RokuPlaybackCommand {
         // Parse content metadata to get Emby-specific fields
         val itemId = content.contentId
         val resumePosition = content.metadata?.resumePositionTicks
 
         // Build validated deep link URL
-        val params = mutableListOf(
-            "Command=PlayNow",
-            "ItemIds=$itemId"
-        )
+        val params =
+            mutableListOf(
+                "Command=PlayNow",
+                "ItemIds=$itemId",
+            )
 
         // Include resume position if available
         if (resumePosition != null && resumePosition > 0) {
@@ -67,26 +70,29 @@ class EmbyRokuChannelPlugin(
     override fun search(query: String): List<RokuMediaContent> {
         logger.debug("Searching Emby library for: {}", query)
 
-        val searchUrl = "$embyServerUrl/Users/$embyUserId/Items?" +
+        val searchUrl =
+            "$embyServerUrl/Users/$embyUserId/Items?" +
                 "searchTerm=$query" +
                 "&recursive=true" +
                 "&limit=$SEARCH_LIMIT" +
                 "&fields=Overview,Path,ImageTags,Genres,CommunityRating,OfficialRating,UserData" +
                 "&includeItemTypes=Movie,Episode"
 
-        val request = Request.Builder()
-            .url(searchUrl)
-            .header("X-Emby-Token", embyApiKey)
-            .get()
-            .build()
+        val request =
+            Request.Builder()
+                .url(searchUrl)
+                .header("X-Emby-Token", embyApiKey)
+                .get()
+                .build()
 
         httpClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 throw IOException("Emby search failed: ${response.code} - ${response.message}")
             }
 
-            val responseBody = response.body?.string()
-                ?: throw IOException("Empty response body from Emby search")
+            val responseBody =
+                response.body?.string()
+                    ?: throw IOException("Empty response body from Emby search")
             val searchResponse = objectMapper.readValue(responseBody, EmbySearchResponse::class.java)
 
             logger.info("Found {} Emby results for query: {}", searchResponse.items.size, query)
@@ -98,35 +104,40 @@ class EmbyRokuChannelPlugin(
                     contentId = item.id,
                     title = buildTitle(item),
                     mediaType = item.type,
-                    metadata = RokuMediaMetadata(
-                        serverId = item.serverId,
-                        itemType = item.type,
-                        seriesName = item.seriesName,
-                        seasonNumber = item.parentIndexNumber,
-                        episodeNumber = item.indexNumber,
-                        year = item.productionYear,
-                        overview = item.overview,
-                        imageUrl = buildImageUrl(item.id, item.imageTags?.primary),
-                        resumePositionTicks = item.userData?.playbackPositionTicks,
-                        runtimeTicks = item.runTimeTicks,
-                        playedPercentage = item.userData?.playedPercentage,
-                        isFavorite = item.userData?.isFavorite,
-                        communityRating = item.communityRating,
-                        officialRating = item.officialRating,
-                        genres = item.genres
-                    )
+                    metadata =
+                        RokuMediaMetadata(
+                            serverId = item.serverId,
+                            itemType = item.type,
+                            seriesName = item.seriesName,
+                            seasonNumber = item.parentIndexNumber,
+                            episodeNumber = item.indexNumber,
+                            year = item.productionYear,
+                            overview = item.overview,
+                            imageUrl = buildImageUrl(item.id, item.imageTags?.primary),
+                            resumePositionTicks = item.userData?.playbackPositionTicks,
+                            runtimeTicks = item.runTimeTicks,
+                            playedPercentage = item.userData?.playedPercentage,
+                            isFavorite = item.userData?.isFavorite,
+                            communityRating = item.communityRating,
+                            officialRating = item.officialRating,
+                            genres = item.genres,
+                        ),
                 )
             }
         }
     }
 
-    private fun buildTitle(item: EmbyItem): String = when (item.type) {
-        "Episode" -> "${item.seriesName} - S${item.parentIndexNumber}E${item.indexNumber} - ${item.name}"
-        "Movie" -> "${item.name}${item.productionYear?.let { " ($it)" } ?: ""}"
-        else -> item.name
-    }
+    private fun buildTitle(item: EmbyItem): String =
+        when (item.type) {
+            "Episode" -> "${item.seriesName} - S${item.parentIndexNumber}E${item.indexNumber} - ${item.name}"
+            "Movie" -> "${item.name}${item.productionYear?.let { " ($it)" } ?: ""}"
+            else -> item.name
+        }
 
-    private fun buildImageUrl(itemId: String, imageTag: String?): String {
+    private fun buildImageUrl(
+        itemId: String,
+        imageTag: String?,
+    ): String {
         return imageTag?.let { "$embyServerUrl/Items/$itemId/Images/Primary?tag=$it" } ?: ""
     }
 
@@ -134,7 +145,7 @@ class EmbyRokuChannelPlugin(
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class EmbySearchResponse(
         @JsonProperty("Items") val items: List<EmbyItem>,
-        @JsonProperty("TotalRecordCount") val totalRecordCount: Int
+        @JsonProperty("TotalRecordCount") val totalRecordCount: Int,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -154,12 +165,12 @@ class EmbyRokuChannelPlugin(
         @JsonProperty("UserData") val userData: UserData? = null,
         @JsonProperty("CommunityRating") val communityRating: Double? = null,
         @JsonProperty("OfficialRating") val officialRating: String? = null,
-        @JsonProperty("Genres") val genres: List<String>? = null
+        @JsonProperty("Genres") val genres: List<String>? = null,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     data class ImageTags(
-        @JsonProperty("Primary") val primary: String? = null
+        @JsonProperty("Primary") val primary: String? = null,
     )
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -167,6 +178,6 @@ class EmbyRokuChannelPlugin(
         @JsonProperty("PlaybackPositionTicks") val playbackPositionTicks: Long? = null,
         @JsonProperty("PlayedPercentage") val playedPercentage: Double? = null,
         @JsonProperty("IsFavorite") val isFavorite: Boolean = false,
-        @JsonProperty("PlayCount") val playCount: Int? = null
+        @JsonProperty("PlayCount") val playCount: Int? = null,
     )
 }
