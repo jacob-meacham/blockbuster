@@ -1,88 +1,39 @@
 package com.blockbuster.theater
 
-import com.blockbuster.BlockbusterConfiguration
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 
 /**
  * Manages theater device setup for media playback.
  *
- * Triggers configured theater devices (Harmony Hub, Home Assistant, etc.)
- * before media playback begins.
+ * Coordinates theater setup by delegating to device-specific [TheaterDeviceHandler]
+ * instances. Does not know about specific device types.
+ *
+ * @param handlers Map of appliance device IDs to their handlers.
+ *   Null values represent devices with no theater setup (e.g., [TheaterDevice.None]).
  */
 class TheaterDeviceManager(
-    private val config: BlockbusterConfiguration
+    private val handlers: Map<String, TheaterDeviceHandler?>
 ) {
     private val logger = LoggerFactory.getLogger(TheaterDeviceManager::class.java)
-    private val httpClient = HttpClient.newHttpClient()
 
     /**
      * Setup theater for the given appliance device ID.
      *
      * @param deviceId The appliance device ID (e.g., "living-room")
      * @throws IllegalArgumentException if deviceId is unknown
+     * @throws TheaterSetupException if the device setup fails
      */
     fun setupTheater(deviceId: String) {
-        val appliance = config.appliances[deviceId]
-            ?: throw IllegalArgumentException("Unknown device: $deviceId")
-
-        when (val theater = appliance.theater) {
-            is TheaterDevice.HarmonyHub -> setupHarmonyHub(theater)
-            is TheaterDevice.HomeAssistant -> setupHomeAssistant(theater)
-            is TheaterDevice.Roku -> setupRoku(theater)
-            is TheaterDevice.None -> logger.debug("No theater setup for device: $deviceId")
+        if (!handlers.containsKey(deviceId)) {
+            throw IllegalArgumentException("Unknown device: $deviceId")
         }
-    }
 
-    private fun setupHarmonyHub(device: TheaterDevice.HarmonyHub) {
-        logger.info("Setting up Harmony Hub at ${device.ip}, activity ${device.activityId}")
-
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://${device.ip}:8088/start"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(
-                """{"activityId":"${device.activityId}"}"""
-            ))
-            .build()
-
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        logger.debug("Harmony Hub response: ${response.statusCode()}")
-
-        try {
-            Thread.sleep(device.delayMs)
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            logger.warn("Harmony Hub delay interrupted")
+        val handler = handlers[deviceId]
+        if (handler == null) {
+            logger.debug("No theater setup for device: {}", deviceId)
+            return
         }
-    }
 
-    private fun setupHomeAssistant(device: TheaterDevice.HomeAssistant) {
-        logger.info("Triggering Home Assistant automation at ${device.ip}: ${device.automationId}")
-
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://${device.ip}:8123/api/services/automation/trigger"))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(
-                """{"entity_id":"${device.automationId}"}"""
-            ))
-            .build()
-
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        logger.debug("Home Assistant response: ${response.statusCode()}")
-    }
-
-    private fun setupRoku(device: TheaterDevice.Roku) {
-        logger.info("Sending Home keypress to Roku at ${device.ip}")
-
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://${device.ip}:8060/keypress/Home"))
-            .POST(HttpRequest.BodyPublishers.ofString(""))
-            .build()
-
-        val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
-        logger.debug("Roku response: ${response.statusCode()}")
+        handler.setup()
     }
 }

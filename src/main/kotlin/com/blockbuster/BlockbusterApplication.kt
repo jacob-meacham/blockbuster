@@ -15,6 +15,8 @@ import com.blockbuster.resource.StaticResource
 import com.blockbuster.resource.PlayResource
 import com.blockbuster.media.SqliteMediaStore
 import com.blockbuster.theater.TheaterDeviceManager
+import com.blockbuster.theater.DefaultTheaterHttpClient
+import com.blockbuster.theater.createTheaterHandler
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
@@ -80,11 +82,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         // Create plugins from configuration
         val plugins = configuration.plugins.enabled.map { pluginDef ->
             try {
-                val pluginDefinition = com.blockbuster.plugin.PluginDefinition(
-                    type = pluginDef.type,
-                    config = pluginDef.config
-                )
-                pluginFactory.createPlugin(pluginDefinition)
+                pluginFactory.createPlugin(pluginDef)
             } catch (e: Exception) {
                 logger.error("Failed to create plugin of type '${pluginDef.type}': ${e.message}")
                 throw e
@@ -95,7 +93,11 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         val pluginManager = MediaPluginManager(plugins)
 
         // Create theater device manager
-        val theaterManager = TheaterDeviceManager(configuration)
+        val theaterHttpClient = DefaultTheaterHttpClient(java.net.http.HttpClient.newHttpClient())
+        val theaterHandlers = configuration.appliances.mapValues { (_, appliance) ->
+            createTheaterHandler(appliance.theater, theaterHttpClient)
+        }
+        val theaterManager = TheaterDeviceManager(theaterHandlers)
 
         // Register resources
         environment.jersey().register(StaticResource())

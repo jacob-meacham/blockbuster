@@ -3,6 +3,7 @@ package com.blockbuster.resource
 import com.blockbuster.media.MediaStore
 import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.theater.TheaterDeviceManager
+import com.blockbuster.theater.TheaterSetupException
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
@@ -37,45 +38,18 @@ class PlayResource(
     @Produces(MediaType.TEXT_HTML)
     fun playPage(@PathParam("uuid") uuid: String): String {
         val mediaItem = mediaStore.get(uuid)
-            ?: return """
-                <html>
-                <head><title>Content Not Found</title></head>
-                <body style="font-family: sans-serif; margin: 40px;">
-                    <h1>Content Not Found</h1>
-                    <p>UUID: $uuid</p>
-                </body>
-                </html>
-            """.trimIndent()
+            ?: return loadTemplate("not-found.html")
+                .replace("{{uuid}}", uuid)
 
-        return """
-            <html>
-            <head>
-                <title>Play Content</title>
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-            </head>
-            <body style="font-family: sans-serif; margin: 40px;">
-                <h1>${mediaItem.plugin} Content</h1>
-                <p>UUID: $uuid</p>
-                <button onclick="play()" style="padding: 20px 40px; font-size: 18px; cursor: pointer;">
-                    Play Now
-                </button>
-                <div id="status" style="margin-top: 20px;"></div>
-                <script>
-                    function play() {
-                        document.getElementById('status').innerHTML = 'Starting playback...';
-                        fetch('/play/$uuid', { method: 'POST' })
-                            .then(r => r.json())
-                            .then(data => {
-                                document.getElementById('status').innerHTML = '<h2>Playing...</h2><pre>' + JSON.stringify(data, null, 2) + '</pre>';
-                            })
-                            .catch(e => {
-                                document.getElementById('status').innerHTML = '<h2 style="color: red;">Error: ' + e.message + '</h2>';
-                            });
-                    }
-                </script>
-            </body>
-            </html>
-        """.trimIndent()
+        return loadTemplate("play.html")
+            .replace("{{uuid}}", uuid)
+            .replace("{{plugin}}", mediaItem.plugin)
+    }
+
+    private fun loadTemplate(name: String): String {
+        return javaClass.classLoader.getResourceAsStream("templates/$name")
+            ?.bufferedReader()?.use { it.readText() }
+            ?: "<h1>Template not found: $name</h1>"
     }
 
     /**
@@ -101,10 +75,14 @@ class PlayResource(
                 .build()
 
         return try {
-            // Execute theater setup if device specified
+            // Execute theater setup if device specified (best-effort)
             deviceId?.let {
                 logger.info("Setting up theater for device: $it")
-                theaterManager.setupTheater(it)
+                try {
+                    theaterManager.setupTheater(it)
+                } catch (e: TheaterSetupException) {
+                    logger.warn("Theater setup failed for device {}, continuing with playback: {}", it, e.message)
+                }
             }
 
             // Execute playback
