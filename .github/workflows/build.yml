@@ -26,7 +26,7 @@ jobs:
         run: ./gradlew jacocoTestReport
 
       - name: Build shadow JAR
-        run: ./gradlew shadowJar
+        run: ./gradlew shadowJar -x buildFrontend -x copyFrontendDist
 
       - name: Upload test results
         if: always()
