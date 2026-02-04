@@ -5,14 +5,14 @@ import org.slf4j.LoggerFactory
 /**
  * Manages theater device setup for media playback.
  *
- * Coordinates theater setup by delegating to device-specific [TheaterDeviceHandler]
- * instances. Does not know about specific device types.
+ * Coordinates theater setup by delegating to device-specific [TheaterDevice.setup] methods.
  *
- * @param handlers Map of appliance device IDs to their handlers.
- *   Null values represent devices with no theater setup (e.g., [TheaterDevice.None]).
+ * @param devices Map of appliance device IDs to their theater devices.
+ * @param http The HTTP client used for theater device communication.
  */
 class TheaterDeviceManager(
-    private val handlers: Map<String, TheaterDeviceHandler?>,
+    private val devices: Map<String, TheaterDevice>,
+    private val http: TheaterHttpClient,
 ) {
     private val logger = LoggerFactory.getLogger(TheaterDeviceManager::class.java)
 
@@ -24,14 +24,15 @@ class TheaterDeviceManager(
      * @throws TheaterSetupException if the device setup fails
      */
     fun setupTheater(deviceId: String) {
-        require(handlers.containsKey(deviceId)) { "Unknown device: $deviceId" }
+        val device =
+            devices[deviceId]
+                ?: throw IllegalArgumentException("Unknown device: $deviceId")
 
-        val handler = handlers[deviceId]
-        if (handler == null) {
+        if (device is TheaterDevice.None) {
             logger.debug("No theater setup for device: {}", deviceId)
             return
         }
 
-        handler.setup()
+        device.setup(http)
     }
 }

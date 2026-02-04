@@ -80,6 +80,24 @@ data class ChannelInfoItem(
 )
 
 /**
+ * Implemented by plugins that require user-level OAuth authentication.
+ * The AuthResource routes /auth/{plugin} requests to the matching plugin.
+ */
+interface AuthenticablePlugin {
+    /** Build the OAuth authorization URL the user should be redirected to. */
+    fun buildAuthorizationUrl(callbackBaseUrl: String): String
+
+    /** Handle the OAuth callback, exchanging the authorization code for tokens. */
+    fun handleAuthCallback(
+        code: String,
+        callbackBaseUrl: String,
+    )
+
+    /** Whether the user has completed authentication. */
+    fun isAuthenticated(): Boolean
+}
+
+/**
  * Immutable registry of plugins keyed by name.
  * Wraps the generic map so Jersey resource constructors don't expose wildcard types.
  */

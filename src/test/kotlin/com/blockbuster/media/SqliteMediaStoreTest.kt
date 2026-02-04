@@ -3,8 +3,8 @@ package com.blockbuster.media
 import com.blockbuster.db.FlywayManager
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -109,9 +109,17 @@ class SqliteMediaStoreTest {
 
     @Test
     fun `should handle removal of non-existent content gracefully`() {
-        assertDoesNotThrow {
-            mediaStore.remove("non-existent-uuid")
-        }
+        val deleted = mediaStore.remove("non-existent-uuid")
+        assertFalse(deleted)
+    }
+
+    @Test
+    fun `remove should return true when item exists`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1", title = "Test")
+        val uuid = mediaStore.put("roku", content)
+        val deleted = mediaStore.remove(uuid)
+        assertTrue(deleted)
+        assertNull(mediaStore.get(uuid))
     }
 
     @Test
@@ -242,5 +250,52 @@ class SqliteMediaStoreTest {
 
         val allUuids = (page1 + page2 + page3).map { it.uuid }.toSet()
         assertEquals(5, allUuids.size)
+    }
+
+    @Test
+    fun `putOrUpdate should create new entry when uuid is null`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1", title = "New")
+        val uuid = mediaStore.putOrUpdate(null, "roku", content)
+        assertNotNull(uuid)
+        val retrieved = mediaStore.get(uuid)
+        assertNotNull(retrieved)
+        assertEquals("roku", retrieved!!.plugin)
+    }
+
+    @Test
+    fun `putOrUpdate should update existing entry when uuid is provided`() {
+        val original = RokuMediaContent(channelId = "12", contentId = "1", title = "Original")
+        val uuid = mediaStore.put("roku", original)
+        val updated = RokuMediaContent(channelId = "12", contentId = "1", title = "Updated")
+        val returnedUuid = mediaStore.putOrUpdate(uuid, "roku", updated)
+        assertEquals(uuid, returnedUuid)
+        val parsed = mediaStore.getParsed(uuid, "roku", RokuMediaContent)
+        assertEquals("Updated", parsed!!.title)
+    }
+
+    @Test
+    fun `rename should update title and return true when item exists`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1", title = "Old Title")
+        val uuid = mediaStore.put("roku", content)
+        val renamed = mediaStore.rename(uuid, "New Title")
+        assertTrue(renamed)
+        val parsed = mediaStore.getParsed(uuid, "roku", RokuMediaContent)
+        assertEquals("New Title", parsed!!.title)
+        assertEquals("12", parsed.channelId)
+    }
+
+    @Test
+    fun `rename should return false when item does not exist`() {
+        val renamed = mediaStore.rename("non-existent", "New Title")
+        assertFalse(renamed)
+    }
+
+    @Test
+    fun `rename should throw when title is blank`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1", title = "Test")
+        val uuid = mediaStore.put("roku", content)
+        assertThrows<IllegalArgumentException> {
+            mediaStore.rename(uuid, "  ")
+        }
     }
 }

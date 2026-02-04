@@ -8,16 +8,14 @@ import {
   Zoom
 } from '@mui/material'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import { channelColors } from '../types'
 
 export type MediaCardProps = {
   title: string
-  channelName?: string
-  channelId: string
-  contentId: string
+  subtitle?: string
   description?: string
   mediaType?: string
   instructions?: string
+  accentColor: string
   isInLibrary: boolean
   isManualSearchTile?: boolean
   onClick: () => void
@@ -26,10 +24,11 @@ export type MediaCardProps = {
 
 export function MediaCard({
   title,
-  channelName,
+  subtitle,
   description,
   mediaType,
   instructions,
+  accentColor,
   isInLibrary,
   isManualSearchTile,
   onClick,
@@ -39,8 +38,6 @@ export function MediaCard({
 
   const isManualInstruction = !!instructions
   const isClickable = !isManualInstruction
-
-  const color = channelColors[channelName || ''] || '#666'
 
   return (
     <Zoom in style={{ transitionDelay: `${index * 30}ms` }}>
@@ -56,19 +53,19 @@ export function MediaCard({
           transition: 'all 0.2s ease',
           transform: hovered && isClickable ? 'translateY(-2px)' : 'none',
           boxShadow: hovered && isClickable
-            ? `0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px ${color}`
+            ? `0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px ${accentColor}`
             : '0 2px 8px rgba(0,0,0,0.3)',
-          borderLeft: `3px solid ${color}`
+          borderLeft: `3px solid ${accentColor}`
         }}
       >
         <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-            {channelName && !isManualSearchTile && (
+            {subtitle && !isManualSearchTile && (
               <Chip
-                label={channelName}
+                label={subtitle}
                 size="small"
                 sx={{
-                  bgcolor: color,
+                  bgcolor: accentColor,
                   color: '#fff',
                   fontWeight: 600,
                   fontSize: '0.7rem',

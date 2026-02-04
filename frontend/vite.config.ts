@@ -13,8 +13,9 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/search/all': `http://localhost:${backendPort}`,
         '/search/plugins': `http://localhost:${backendPort}`,
-        '/search/channels': `http://localhost:${backendPort}`,
         '/search/roku': `http://localhost:${backendPort}`,
+        '/roku/channels': `http://localhost:${backendPort}`,
+        '/spotify/channels': `http://localhost:${backendPort}`,
         '/library': {
           target: `http://localhost:${backendPort}`,
           bypass(req) {
@@ -25,6 +26,7 @@ export default defineConfig(({ mode }) => {
         },
         '/play': `http://localhost:${backendPort}`,
         '/health': `http://localhost:${backendPort}`,
+        '/auth': `http://localhost:${backendPort}`,
       }
     },
     build: {

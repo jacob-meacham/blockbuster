@@ -2,8 +2,6 @@ package com.blockbuster.resource
 
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.media.RokuMediaMetadata
-import com.blockbuster.plugin.ChannelInfoItem
-import com.blockbuster.plugin.ChannelInfoProvider
 import com.blockbuster.plugin.MediaPlugin
 import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.plugin.SearchOptions
@@ -447,56 +445,4 @@ class SearchResourceTest {
         val body = response.entity as PluginListResponse
         assertTrue(body.plugins.isEmpty())
     }
-
-    // ---------------------------------------------------------------
-    // getChannelInfo tests
-    // ---------------------------------------------------------------
-
-    @Test
-    fun `getChannelInfo returns channel info from ChannelInfoProvider`() {
-        // Create a mock that implements both MediaPlugin and ChannelInfoProvider
-        val rokuPlugin = mock<RokuPluginWithChannelInfo>()
-        whenever(rokuPlugin.getChannelInfo()).thenReturn(
-            listOf(
-                ChannelInfoItem(channelId = "12", channelName = "Netflix", searchUrl = "https://netflix.com/search"),
-                ChannelInfoItem(channelId = "44191", channelName = "Emby", searchUrl = ""),
-            ),
-        )
-        plugins["roku"] = rokuPlugin
-
-        val response = searchResource.getChannelInfo()
-
-        assertEquals(Response.Status.OK.statusCode, response.status)
-        val body = response.entity as ChannelListResponse
-        assertEquals(2, body.channels.size)
-        assertEquals("12", body.channels[0].channelId)
-        assertEquals("Netflix", body.channels[0].channelName)
-        assertEquals("https://netflix.com/search", body.channels[0].searchUrl)
-        assertEquals("44191", body.channels[1].channelId)
-        assertEquals("Emby", body.channels[1].channelName)
-    }
-
-    @Test
-    fun `getChannelInfo returns empty list when no ChannelInfoProvider plugins`() {
-        val response = searchResource.getChannelInfo()
-
-        assertEquals(Response.Status.OK.statusCode, response.status)
-        val body = response.entity as ChannelListResponse
-        assertTrue(body.channels.isEmpty())
-    }
-
-    @Test
-    fun `getChannelInfo returns empty list when plugin is not ChannelInfoProvider`() {
-        val nonProviderPlugin = mock<MediaPlugin<RokuMediaContent>>()
-        plugins["roku"] = nonProviderPlugin
-
-        val response = searchResource.getChannelInfo()
-
-        assertEquals(Response.Status.OK.statusCode, response.status)
-        val body = response.entity as ChannelListResponse
-        assertTrue(body.channels.isEmpty())
-    }
-
-    // Helper interface for mocking a MediaPlugin that also implements ChannelInfoProvider
-    private interface RokuPluginWithChannelInfo : MediaPlugin<RokuMediaContent>, ChannelInfoProvider
 }

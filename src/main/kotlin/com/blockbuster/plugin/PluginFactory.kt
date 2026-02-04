@@ -10,9 +10,12 @@ import com.blockbuster.plugin.roku.NetflixRokuChannelPlugin
 import com.blockbuster.plugin.roku.PrimeVideoRokuChannelPlugin
 import com.blockbuster.plugin.roku.RokuChannelPlugin
 import com.blockbuster.plugin.roku.RokuPlugin
+import com.blockbuster.plugin.spotify.SpotifyPlugin
+import com.blockbuster.plugin.spotify.SqliteSpotifyTokenStore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
+import javax.sql.DataSource
 
 /**
  * Typed configuration for a Roku plugin instance.
@@ -45,12 +48,22 @@ data class EmbyChannelConfig(
 )
 
 /**
+ * Typed configuration for the Spotify plugin.
+ */
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class SpotifyPluginConfig(
+    val clientId: String? = null,
+    val clientSecret: String? = null,
+)
+
+/**
  * Factory for creating media plugins based on configuration
  */
 class PluginFactory(
     private val mediaStore: MediaStore,
     private val httpClient: OkHttpClient = OkHttpClient(),
     private val braveSearchApiKey: String? = null,
+    private val dataSource: DataSource? = null,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -60,6 +73,7 @@ class PluginFactory(
     fun createPlugin(definition: PluginDefinition): MediaPlugin<*> {
         return when (definition.type.lowercase()) {
             "roku" -> createRokuPlugin(definition)
+            "spotify" -> createSpotifyPlugin(definition)
             else -> throw IllegalArgumentException("Unknown plugin type: ${definition.type}")
         }
     }
@@ -137,6 +151,40 @@ class PluginFactory(
         }
 
         return channelPlugins
+    }
+
+    /**
+     * Create a Spotify plugin from typed configuration
+     */
+    private fun createSpotifyPlugin(definition: PluginDefinition): SpotifyPlugin {
+        val config =
+            try {
+                MediaJson.mapper.convertValue(definition.config, SpotifyPluginConfig::class.java)
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid Spotify plugin configuration: ${e.message}", e)
+            }
+
+        val clientId =
+            config.clientId
+                ?: throw IllegalArgumentException("Spotify plugin requires 'clientId' configuration")
+        val clientSecret =
+            config.clientSecret
+                ?: throw IllegalArgumentException("Spotify plugin requires 'clientSecret' configuration")
+        val ds =
+            dataSource
+                ?: throw IllegalArgumentException("Spotify plugin requires a dataSource for token storage")
+
+        val tokenStore = SqliteSpotifyTokenStore(ds, httpClient, clientId, clientSecret)
+
+        logger.info("Creating Spotify plugin")
+
+        return SpotifyPlugin(
+            clientId = clientId,
+            clientSecret = clientSecret,
+            mediaStore = mediaStore,
+            httpClient = httpClient,
+            tokenStore = tokenStore,
+        )
     }
 
     /**

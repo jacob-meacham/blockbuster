@@ -17,18 +17,19 @@ class PluginFactoryTest {
     private lateinit var pluginFactory: PluginFactory
     private lateinit var httpClient: OkHttpClient
     private lateinit var mediaStore: MediaStore
+    private lateinit var dataSource: SQLiteDataSource
 
     @BeforeEach
     fun setUp() {
         // Create in-memory database-backed store
-        val ds =
-            org.sqlite.SQLiteDataSource().apply {
+        dataSource =
+            SQLiteDataSource().apply {
                 url = "jdbc:sqlite:file:testdb?mode=memory&cache=shared"
                 setEnforceForeignKeys(true)
             }
-        mediaStore = SqliteMediaStore(ds)
+        mediaStore = SqliteMediaStore(dataSource)
         httpClient = OkHttpClient()
-        pluginFactory = PluginFactory(mediaStore, httpClient)
+        pluginFactory = PluginFactory(mediaStore, httpClient, dataSource = dataSource)
     }
 
     @AfterEach
@@ -137,5 +138,94 @@ class PluginFactoryTest {
         assertEquals("roku", plugin1.getPluginName())
         assertEquals("roku", plugin2.getPluginName())
         assertNotEquals(plugin1, plugin2) // Different instances
+    }
+
+    // ── Spotify plugin factory tests ────────────────────────────────────────
+
+    @Test
+    fun `should create Spotify plugin from configuration`() {
+        val pluginDefinition =
+            PluginDefinition(
+                type = "spotify",
+                config =
+                    mapOf(
+                        "clientId" to "spotify-client-id",
+                        "clientSecret" to "spotify-client-secret",
+                    ),
+            )
+
+        val plugin = pluginFactory.createPlugin(pluginDefinition)
+
+        assertNotNull(plugin)
+        assertEquals("spotify", plugin.getPluginName())
+        assertTrue(plugin.getDescription().contains("Spotify"))
+    }
+
+    @Test
+    fun `should throw when Spotify plugin missing clientId`() {
+        val pluginDefinition =
+            PluginDefinition(
+                type = "spotify",
+                config = mapOf("clientSecret" to "secret"),
+            )
+
+        val exception =
+            assertThrows<IllegalArgumentException> {
+                pluginFactory.createPlugin(pluginDefinition)
+            }
+        assertTrue(exception.message?.contains("clientId") == true)
+    }
+
+    @Test
+    fun `should throw when Spotify plugin missing clientSecret`() {
+        val pluginDefinition =
+            PluginDefinition(
+                type = "spotify",
+                config = mapOf("clientId" to "id"),
+            )
+
+        val exception =
+            assertThrows<IllegalArgumentException> {
+                pluginFactory.createPlugin(pluginDefinition)
+            }
+        assertTrue(exception.message?.contains("clientSecret") == true)
+    }
+
+    @Test
+    fun `should throw when Spotify plugin has no dataSource`() {
+        val factoryWithoutDs = PluginFactory(mediaStore, httpClient, dataSource = null)
+
+        val pluginDefinition =
+            PluginDefinition(
+                type = "spotify",
+                config =
+                    mapOf(
+                        "clientId" to "id",
+                        "clientSecret" to "secret",
+                    ),
+            )
+
+        val exception =
+            assertThrows<IllegalArgumentException> {
+                factoryWithoutDs.createPlugin(pluginDefinition)
+            }
+        assertTrue(exception.message?.contains("dataSource") == true)
+    }
+
+    @Test
+    fun `Spotify plugin should implement AuthenticablePlugin`() {
+        val pluginDefinition =
+            PluginDefinition(
+                type = "spotify",
+                config =
+                    mapOf(
+                        "clientId" to "id",
+                        "clientSecret" to "secret",
+                    ),
+            )
+
+        val plugin = pluginFactory.createPlugin(pluginDefinition)
+
+        assertTrue(plugin is AuthenticablePlugin)
     }
 }

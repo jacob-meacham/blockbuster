@@ -6,7 +6,6 @@ import java.time.Instant
 /**
  * Type-safe metadata for Roku media content.
  *
- * Replaces the previous Map<String, Any>? metadata field with properly typed fields.
  * All fields are optional to support different channel types (Emby, Brave Search, etc.).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -1,50 +1,36 @@
 package com.blockbuster.theater
 
 /**
+ * Exception thrown when theater device setup fails.
+ *
+ * @param deviceType Human-readable device type (e.g., "Harmony Hub", "Roku")
+ */
+class TheaterSetupException(
+    val deviceType: String,
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException("$deviceType setup failed: $message", cause)
+
+/**
  * Represents different types of theater devices that can be controlled for media playback setup.
+ *
+ * Each variant knows how to set itself up given a [TheaterHttpClient].
  */
 sealed class TheaterDevice {
     /**
-     * Harmony Hub for controlling home theater equipment.
+     * Execute the setup procedure for this theater device.
      *
-     * @param ip IP address of the Harmony Hub
-     * @param activityId ID of the activity to start
-     * @param delayMs Delay in milliseconds after starting activity (default: 5000ms)
+     * @param http The HTTP client used to send setup commands
+     * @throws TheaterSetupException if the device setup fails
      */
-    data class HarmonyHub(
-        val ip: String,
-        val activityId: String,
-        val delayMs: Long = 5000,
-    ) : TheaterDevice() {
-        init {
-            require(ip.isNotBlank()) { "HarmonyHub ip must not be blank" }
-            require(activityId.isNotBlank()) { "HarmonyHub activityId must not be blank" }
-            require(delayMs in 0..30000) { "HarmonyHub delayMs must be between 0 and 30000, was $delayMs" }
-        }
-    }
-
-    /**
-     * Home Assistant for triggering automations.
-     *
-     * @param ip IP address of the Home Assistant instance
-     * @param automationId Entity ID of the automation to trigger (e.g., "automation.movie_mode")
-     */
-    data class HomeAssistant(
-        val ip: String,
-        val automationId: String,
-    ) : TheaterDevice()
-
-    /**
-     * Roku device for sending remote control commands.
-     *
-     * @param ip IP address of the Roku device
-     */
-    data class Roku(
-        val ip: String,
-    ) : TheaterDevice()
+    abstract fun setup(http: TheaterHttpClient)
 
     /**
      * No theater setup - playback only.
      */
-    object None : TheaterDevice()
+    object None : TheaterDevice() {
+        override fun setup(http: TheaterHttpClient) {
+            // No-op: no theater device to set up
+        }
+    }
 }

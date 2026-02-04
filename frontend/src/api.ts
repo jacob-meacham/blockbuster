@@ -36,7 +36,7 @@ export async function fetchLibrary(): Promise<LibraryItem[]> {
 export async function addToLibrary(
   result: SearchResult
 ): Promise<{ uuid: string; url: string }> {
-  const pluginName = result.plugin || 'roku'
+  const pluginName = result.plugin
   const resp = await fetch(`/library/${pluginName}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -75,8 +75,19 @@ export async function fetchPlugins(): Promise<PluginInfo[]> {
   return data.plugins || []
 }
 
-export async function fetchChannels(): Promise<ChannelInfo[]> {
-  const resp = await fetch('/search/channels')
+export async function fetchChannels(pluginName: string): Promise<ChannelInfo[]> {
+  const resp = await fetch(`/${encodeURIComponent(pluginName)}/channels`)
   const data = await resp.json()
   return data.channels || []
+}
+
+export type AuthStatus = {
+  plugin: string
+  available: boolean
+  authenticated: boolean
+}
+
+export async function fetchAuthStatus(plugin: string): Promise<AuthStatus> {
+  const resp = await fetch(`/auth/${plugin}/status`)
+  return resp.json()
 }

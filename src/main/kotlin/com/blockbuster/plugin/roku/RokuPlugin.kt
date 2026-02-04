@@ -197,15 +197,6 @@ class RokuPlugin(
         delay(KEYPRESS_DELAY_MS)
     }
 
-    fun getDeviceInfo(): String? {
-        val url =
-            ecpBaseUrl.newBuilder()
-                .addPathSegment("query")
-                .addPathSegment("device-info")
-                .build()
-        return sendEcpRequest(url.toString(), "GET")
-    }
-
     private fun sendEcpRequest(
         urlString: String,
         method: String,

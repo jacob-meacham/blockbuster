@@ -1,6 +1,5 @@
 package com.blockbuster.resource
 
-import com.blockbuster.plugin.ChannelInfoProvider
 import com.blockbuster.plugin.PluginException
 import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.plugin.SearchOptions
@@ -171,24 +170,6 @@ class SearchResource(
             Response.ok(PluginListResponse(plugins = pluginList)).build()
         } catch (e: Exception) {
             logger.error("Failed to get plugin list: {}", e.message, e)
-            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(ErrorResponse("Internal server error"))
-                .build()
-        }
-    }
-
-    @GET
-    @Path("/channels")
-    fun getChannelInfo(): Response {
-        return try {
-            val channels =
-                plugins.values
-                    .filterIsInstance<ChannelInfoProvider>()
-                    .flatMap { it.getChannelInfo() }
-
-            Response.ok(ChannelListResponse(channels = channels)).build()
-        } catch (e: Exception) {
-            logger.error("Failed to get channel info: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(ErrorResponse("Internal server error"))
                 .build()

@@ -42,7 +42,8 @@ import {
   fetchChannels
 } from './api'
 import type { LibraryItem, PluginInfo, ChannelInfo } from './types'
-import { channelColors } from './types'
+import { getSourceName, getSourceColor } from './types'
+import type { RokuMediaContent } from './types'
 
 async function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -58,13 +59,13 @@ async function copyToClipboard(text: string): Promise<void> {
   document.body.removeChild(textarea)
 }
 
-type SortKey = 'plugin' | 'channelName' | 'title' | 'contentId'
+type SortKey = 'plugin' | 'source' | 'title' | 'contentId'
 type SortDir = 'asc' | 'desc'
 
 function getItemValue(item: LibraryItem, key: SortKey): string {
   switch (key) {
     case 'plugin': return item.plugin || ''
-    case 'channelName': return item.parsedContent?.channelName || ''
+    case 'source': return getSourceName(item.plugin, item.parsedContent)
     case 'title': return item.parsedContent?.title || ''
     case 'contentId': return item.parsedContent?.contentId || ''
   }
@@ -97,13 +98,14 @@ export function LibraryView() {
   const [addMediaType, setAddMediaType] = React.useState('movie')
 
   React.useEffect(() => {
-    fetchPlugins().then((p) => {
+    fetchPlugins().then(async (p) => {
       setPlugins(p)
       if (p.length > 0) setAddPlugin(p[0].name)
-    }).catch(console.error)
-    fetchChannels().then((c) => {
-      setChannels(c)
-      if (c.length > 0) setAddChannel(c[0].channelId)
+      const allChannels = (await Promise.all(
+        p.map(plugin => fetchChannels(plugin.name))
+      )).flat()
+      setChannels(allChannels)
+      if (allChannels.length > 0) setAddChannel(allChannels[0].channelId)
     }).catch(console.error)
   }, [])
 
@@ -116,9 +118,9 @@ export function LibraryView() {
       const lower = filter.toLowerCase()
       items = items.filter((item) => {
         const title = item.parsedContent?.title?.toLowerCase() || ''
-        const channel = item.parsedContent?.channelName?.toLowerCase() || ''
+        const source = getSourceName(item.plugin, item.parsedContent).toLowerCase()
         const contentId = item.parsedContent?.contentId?.toLowerCase() || ''
-        return title.includes(lower) || channel.includes(lower) || contentId.includes(lower)
+        return title.includes(lower) || source.includes(lower) || contentId.includes(lower)
       })
     }
     return [...items].sort((a, b) => {
@@ -177,17 +179,18 @@ export function LibraryView() {
     if (!addTitle.trim() || !addContentId.trim()) return
     const channel = channels.find((c) => c.channelId === addChannel)
     try {
+      const content: RokuMediaContent = {
+        channelName: channel?.channelName || '',
+        channelId: addChannel,
+        contentId: addContentId.trim(),
+        title: addTitle.trim(),
+        mediaType: addMediaType
+      }
       await addToLibrary({
         source: 'manual',
         plugin: addPlugin,
         title: addTitle.trim(),
-        content: {
-          channelName: channel?.channelName || '',
-          channelId: addChannel,
-          contentId: addContentId.trim(),
-          title: addTitle.trim(),
-          mediaType: addMediaType
-        }
+        content
       })
       library.refresh()
       setAddOpen(false)
@@ -318,12 +321,12 @@ export function LibraryView() {
                   </TableCell>
                   <TableCell sx={headerSx}>
                     <TableSortLabel
-                      active={sortKey === 'channelName'}
-                      direction={sortKey === 'channelName' ? sortDir : 'asc'}
-                      onClick={() => handleSort('channelName')}
+                      active={sortKey === 'source'}
+                      direction={sortKey === 'source' ? sortDir : 'asc'}
+                      onClick={() => handleSort('source')}
                       sx={{ '&.MuiTableSortLabel-root': { color: '#999' }, '& .MuiTableSortLabel-icon': { color: '#666 !important' } }}
                     >
-                      Channel
+                      Source
                     </TableSortLabel>
                   </TableCell>
                   <TableCell sx={headerSx}>
@@ -351,8 +354,8 @@ export function LibraryView() {
               </TableHead>
               <TableBody>
                 {filtered.map((item) => {
-                  const channelName = item.parsedContent?.channelName || ''
-                  const color = channelColors[channelName] || '#666'
+                  const sourceName = getSourceName(item.plugin, item.parsedContent)
+                  const color = getSourceColor(item.plugin, item.parsedContent)
                   return (
                     <TableRow
                       key={item.uuid}
@@ -361,21 +364,17 @@ export function LibraryView() {
                     >
                       <TableCell sx={{ color: '#ccc' }}>{item.plugin}</TableCell>
                       <TableCell>
-                        {channelName ? (
-                          <Chip
-                            label={channelName}
-                            size="small"
-                            sx={{
-                              bgcolor: color,
-                              color: '#fff',
-                              fontWeight: 600,
-                              fontSize: '0.7rem',
-                              height: 20
-                            }}
-                          />
-                        ) : (
-                          <Typography variant="caption" sx={{ color: '#666' }}>—</Typography>
-                        )}
+                        <Chip
+                          label={sourceName}
+                          size="small"
+                          sx={{
+                            bgcolor: color,
+                            color: '#fff',
+                            fontWeight: 600,
+                            fontSize: '0.7rem',
+                            height: 20
+                          }}
+                        />
                       </TableCell>
                       <TableCell sx={{ color: '#fff' }}>
                         {item.parsedContent?.title || 'Untitled'}

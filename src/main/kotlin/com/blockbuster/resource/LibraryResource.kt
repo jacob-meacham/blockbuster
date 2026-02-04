@@ -73,10 +73,7 @@ class LibraryResource(
             val parser = plugin.getContentParser()
             val json = MediaJson.mapper.writeValueAsString(request.content)
             val typed = parser.fromJson(json)
-            val assignedUuid =
-                request.uuid?.also {
-                    mediaStore.update(it, pluginName.lowercase(), typed)
-                } ?: mediaStore.put(pluginName.lowercase(), typed)
+            val assignedUuid = mediaStore.putOrUpdate(request.uuid, pluginName.lowercase(), typed)
 
             val blockbusterUrl = "/play/$assignedUuid"
 
@@ -108,11 +105,11 @@ class LibraryResource(
         @PathParam("uuid") uuid: String,
     ): Response {
         return try {
-            mediaStore.get(uuid)
-                ?: return Response.status(Response.Status.NOT_FOUND)
+            if (!mediaStore.remove(uuid)) {
+                return Response.status(Response.Status.NOT_FOUND)
                     .entity(mapOf("error" to "Item not found"))
                     .build()
-            mediaStore.remove(uuid)
+            }
             logger.info("Deleted library item uuid={}", uuid)
             Response.ok(mapOf("deleted" to true)).build()
         } catch (e: Exception) {
@@ -130,36 +127,17 @@ class LibraryResource(
         request: RenameRequest,
     ): Response {
         return try {
-            val item =
-                mediaStore.get(uuid)
-                    ?: return Response.status(Response.Status.NOT_FOUND)
-                        .entity(mapOf("error" to "Item not found"))
-                        .build()
-
-            val jsonMap: MutableMap<String, Any?> =
-                MediaJson.mapper.readValue(
-                    item.configJson,
-                    MediaJson.mapper.typeFactory.constructMapType(
-                        MutableMap::class.java,
-                        String::class.java,
-                        Any::class.java,
-                    ),
-                )
-            jsonMap["title"] = request.title
-
-            val plugin =
-                plugins[item.plugin]
-                    ?: return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(mapOf("error" to "Unknown plugin: ${item.plugin}"))
-                        .build()
-
-            val parser = plugin.getContentParser()
-            val updatedJson = MediaJson.mapper.writeValueAsString(jsonMap)
-            val typed = parser.fromJson(updatedJson)
-            mediaStore.update(uuid, item.plugin, typed)
-
+            if (!mediaStore.rename(uuid, request.title)) {
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Item not found"))
+                    .build()
+            }
             logger.info("Renamed library item uuid={} to '{}'", uuid, request.title)
             Response.ok(mapOf("uuid" to uuid, "title" to request.title)).build()
+        } catch (e: IllegalArgumentException) {
+            Response.status(Response.Status.BAD_REQUEST)
+                .entity(mapOf("error" to (e.message ?: "Invalid title")))
+                .build()
         } catch (e: Exception) {
             logger.error("Failed to rename library item: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)

@@ -6,9 +6,11 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
 
 class TheaterDeviceManagerTest {
+    private val mockHttp = mock<TheaterHttpClient>()
+
     @Test
     fun `setupTheater with unknown deviceId throws IllegalArgumentException`() {
-        val manager = TheaterDeviceManager(emptyMap())
+        val manager = TheaterDeviceManager(emptyMap(), mockHttp)
 
         val exception =
             assertThrows<IllegalArgumentException> {
@@ -18,37 +20,41 @@ class TheaterDeviceManagerTest {
     }
 
     @Test
-    fun `setupTheater with null handler does nothing`() {
+    fun `setupTheater with None device does nothing`() {
         val manager =
             TheaterDeviceManager(
-                mapOf("test-device" to null),
+                mapOf("test-device" to TheaterDevice.None),
+                mockHttp,
             )
 
         manager.setupTheater("test-device")
+
+        verifyNoInteractions(mockHttp)
     }
 
     @Test
-    fun `setupTheater delegates to handler`() {
-        val mockHandler = mock<TheaterDeviceHandler>()
+    fun `setupTheater delegates to device setup`() {
+        val device = RokuDevice(ip = "192.168.1.100")
         val manager =
             TheaterDeviceManager(
-                mapOf("living-room" to mockHandler),
+                mapOf("living-room" to device),
+                mockHttp,
             )
 
         manager.setupTheater("living-room")
 
-        verify(mockHandler).setup()
+        verify(mockHttp).sendAndCheck(any(), anyOrNull(), any())
     }
 
     @Test
-    fun `setupTheater propagates handler exceptions`() {
-        val mockHandler =
-            mock<TheaterDeviceHandler> {
-                on { setup() } doThrow TheaterSetupException("TestDevice", "HTTP 500: error")
-            }
+    fun `setupTheater propagates device exceptions`() {
+        whenever(mockHttp.sendAndCheck(any(), anyOrNull(), any()))
+            .thenThrow(TheaterSetupException("Roku", "HTTP 500: error"))
+        val device = RokuDevice(ip = "192.168.1.100")
         val manager =
             TheaterDeviceManager(
-                mapOf("living-room" to mockHandler),
+                mapOf("living-room" to device),
+                mockHttp,
             )
 
         assertThrows<TheaterSetupException> {
@@ -58,22 +64,23 @@ class TheaterDeviceManagerTest {
 
     @Test
     fun `multiple appliances route independently`() {
-        val handlerA = mock<TheaterDeviceHandler>()
+        val device = RokuDevice(ip = "192.168.1.100")
         val manager =
             TheaterDeviceManager(
                 mapOf(
-                    "living-room" to handlerA,
-                    "kitchen" to null,
+                    "living-room" to device,
+                    "kitchen" to TheaterDevice.None,
                 ),
+                mockHttp,
             )
 
-        // Null handler: no interaction
+        // None device: no HTTP interaction
         manager.setupTheater("kitchen")
-        verifyNoInteractions(handlerA)
+        verifyNoInteractions(mockHttp)
 
-        // Real handler: setup called
+        // Real device: setup called
         manager.setupTheater("living-room")
-        verify(handlerA).setup()
+        verify(mockHttp).sendAndCheck(any(), anyOrNull(), any())
 
         // Unknown device: throws
         assertThrows<IllegalArgumentException> {

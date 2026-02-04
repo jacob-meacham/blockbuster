@@ -107,17 +107,72 @@ class SqliteMediaStore(
         }
     }
 
-    override fun remove(uuid: String) {
+    override fun putOrUpdate(
+        uuid: String?,
+        plugin: String,
+        content: MediaContent,
+    ): String {
+        return if (uuid != null) {
+            update(uuid, plugin, content)
+            uuid
+        } else {
+            put(plugin, content)
+        }
+    }
+
+    override fun remove(uuid: String): Boolean {
         val sql = "DELETE FROM media_library WHERE uuid = ?"
         try {
             dataSource.connection.use { connection ->
                 connection.prepareStatement(sql).use { ps ->
                     ps.setString(1, uuid)
-                    ps.executeUpdate()
+                    val rowsDeleted = ps.executeUpdate()
+                    return rowsDeleted > 0
                 }
             }
         } catch (e: SQLException) {
             logger.error("Failed to remove media item: {}", e.message, e)
+            throw e
+        }
+    }
+
+    override fun rename(
+        uuid: String,
+        newTitle: String,
+    ): Boolean {
+        require(newTitle.isNotBlank()) { "Title must not be blank" }
+
+        val item = get(uuid) ?: return false
+
+        val jsonMap: MutableMap<String, Any?> =
+            MediaJson.mapper.readValue(
+                item.configJson,
+                MediaJson.mapper.typeFactory.constructMapType(
+                    MutableMap::class.java,
+                    String::class.java,
+                    Any::class.java,
+                ),
+            )
+        jsonMap["title"] = newTitle
+        val updatedJson = MediaJson.mapper.writeValueAsString(jsonMap)
+
+        try {
+            dataSource.connection.use { connection ->
+                val sql =
+                    """
+                    UPDATE media_library
+                    SET config_json = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
+                    WHERE uuid = ?
+                    """.trimIndent()
+                connection.prepareStatement(sql).use { ps ->
+                    ps.setString(1, updatedJson)
+                    ps.setString(2, uuid)
+                    val rowsUpdated = ps.executeUpdate()
+                    return rowsUpdated > 0
+                }
+            }
+        } catch (e: SQLException) {
+            logger.error("Failed to rename media item uuid={}: {}", uuid, e.message, e)
             throw e
         }
     }

@@ -7,14 +7,15 @@ import com.blockbuster.media.SqliteMediaStore
 import com.blockbuster.plugin.MediaPlugin
 import com.blockbuster.plugin.PluginFactory
 import com.blockbuster.plugin.PluginRegistry
+import com.blockbuster.resource.AuthResource
 import com.blockbuster.resource.FrontendResource
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.LibraryResource
 import com.blockbuster.resource.PlayResource
+import com.blockbuster.resource.PluginResource
 import com.blockbuster.resource.SearchResource
 import com.blockbuster.theater.DefaultTheaterHttpClient
 import com.blockbuster.theater.TheaterDeviceManager
-import com.blockbuster.theater.createTheaterHandler
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
@@ -85,7 +86,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
 
         // Create plugins from configuration
         val braveApiKey = if (configuration.braveSearch.enabled) configuration.braveSearch.apiKey else null
-        val pluginFactory = PluginFactory(mediaStore, httpClient, braveApiKey)
+        val pluginFactory = PluginFactory(mediaStore, httpClient, braveApiKey, dataSource)
         val plugins = createPlugins(configuration, pluginFactory)
 
         // Build plugin registry
@@ -94,11 +95,8 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
 
         // Create theater device manager
         val theaterHttpClient = DefaultTheaterHttpClient(httpClient)
-        val theaterHandlers =
-            configuration.appliances.mapValues { (_, appliance) ->
-                createTheaterHandler(appliance.theater, theaterHttpClient)
-            }
-        val theaterManager = TheaterDeviceManager(theaterHandlers)
+        val theaterDevices = configuration.appliances.mapValues { (_, appliance) -> appliance.theater }
+        val theaterManager = TheaterDeviceManager(theaterDevices, theaterHttpClient)
 
         // Register health checks
         environment.healthChecks().register("database", DatabaseHealthCheck(dataSource))
@@ -109,6 +107,8 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         environment.jersey().register(SearchResource(registry))
         environment.jersey().register(LibraryResource(registry, mediaStore))
         environment.jersey().register(PlayResource(mediaStore, registry, theaterManager))
+        environment.jersey().register(PluginResource(registry))
+        environment.jersey().register(AuthResource(registry))
         environment.jersey().register(FrontendResource())
 
         // Register lifecycle shutdown hooks

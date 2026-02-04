@@ -50,7 +50,7 @@ class LibraryResourceTest {
         plugins[pluginName] = mockPlugin
         whenever(mockPlugin.getContentParser()).thenReturn(mockParser)
         whenever(mockParser.fromJson(any())).thenReturn(rokuContent)
-        whenever(mediaStore.put(eq(pluginName), any())).thenReturn(uuid)
+        whenever(mediaStore.putOrUpdate(isNull(), eq(pluginName), any())).thenReturn(uuid)
 
         // When
         val response = libraryResource.addByPlugin(pluginName, request)
@@ -88,12 +88,13 @@ class LibraryResourceTest {
         plugins[pluginName] = mockPlugin
         whenever(mockPlugin.getContentParser()).thenReturn(mockParser)
         whenever(mockParser.fromJson(any())).thenReturn(rokuContent)
+        whenever(mediaStore.putOrUpdate(eq(existingUuid), eq(pluginName), any())).thenReturn(existingUuid)
 
         // When
         val response = libraryResource.addByPlugin(pluginName, request)
 
         // Then
-        verify(mediaStore).update(eq(existingUuid), eq(pluginName), any())
+        verify(mediaStore).putOrUpdate(eq(existingUuid), eq(pluginName), any())
         verify(mediaStore, never()).put(any(), any())
 
         @Suppress("UNCHECKED_CAST")
@@ -124,5 +125,38 @@ class LibraryResourceTest {
         // Just verify the format matches what we expect
         assertTrue(expectedUrl.startsWith("/play/"))
         assertTrue(expectedUrl.endsWith(uuid))
+    }
+
+    @Test
+    fun `delete returns success when item exists`() {
+        whenever(mediaStore.remove("existing-uuid")).thenReturn(true)
+        val response = libraryResource.delete("existing-uuid")
+        assertEquals(Response.Status.OK.statusCode, response.status)
+    }
+
+    @Test
+    fun `delete returns 404 when item does not exist`() {
+        whenever(mediaStore.remove("no-such-uuid")).thenReturn(false)
+        val response = libraryResource.delete("no-such-uuid")
+        assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
+    }
+
+    @Test
+    fun `rename returns success when item exists`() {
+        whenever(mediaStore.rename("uuid-1", "New Title")).thenReturn(true)
+        val response = libraryResource.rename("uuid-1", LibraryResource.RenameRequest("New Title"))
+        assertEquals(Response.Status.OK.statusCode, response.status)
+
+        @Suppress("UNCHECKED_CAST")
+        val responseMap = response.entity as Map<String, String>
+        assertEquals("uuid-1", responseMap["uuid"])
+        assertEquals("New Title", responseMap["title"])
+    }
+
+    @Test
+    fun `rename returns 404 when item does not exist`() {
+        whenever(mediaStore.rename("no-such-uuid", "New Title")).thenReturn(false)
+        val response = libraryResource.rename("no-such-uuid", LibraryResource.RenameRequest("New Title"))
+        assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
     }
 }

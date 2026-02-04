@@ -17,7 +17,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip
+  Chip,
+  Button
 } from '@mui/material'
 import SearchIcon from '@mui/icons-material/Search'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
@@ -26,10 +27,11 @@ import ListAltIcon from '@mui/icons-material/ListAlt'
 import { Link as RouterLink } from 'react-router-dom'
 import { useSearch } from './hooks/useSearch'
 import { useLibrary } from './hooks/useLibrary'
-import { fetchPlugins, fetchChannels, resolvePlayUrl } from './api'
+import { fetchPlugins, fetchChannels, resolvePlayUrl, fetchAuthStatus } from './api'
+import type { AuthStatus } from './api'
 import { MediaCard } from './components/MediaCard'
 import type { PluginInfo, ChannelInfo, SearchResult } from './types'
-import { channelColors } from './types'
+import { getSourceName, getSourceColor, sourceColors } from './types'
 
 async function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard?.writeText) {
@@ -57,16 +59,28 @@ export function UnifiedView() {
     message: string
     severity: 'success' | 'error'
   }>({ open: false, message: '', severity: 'success' })
+  const [authStatus, setAuthStatus] = React.useState<AuthStatus | null>(null)
 
   React.useEffect(() => {
-    fetchPlugins().then((p) => {
+    if (!search.selectedPlugin) {
+      setAuthStatus(null)
+      return
+    }
+    fetchAuthStatus(search.selectedPlugin).then(setAuthStatus).catch(() => setAuthStatus(null))
+  }, [search.selectedPlugin])
+
+  React.useEffect(() => {
+    fetchPlugins().then(async (p) => {
       setPlugins(p)
       // Default to first plugin if no plugin selected yet
       if (p.length > 0 && search.selectedPlugin === '') {
         search.setSelectedPlugin(p[0].name)
       }
+      const allChannels = (await Promise.all(
+        p.map(plugin => fetchChannels(plugin.name))
+      )).flat()
+      setChannels(allChannels)
     }).catch(console.error)
-    fetchChannels().then(setChannels).catch(console.error)
   }, [])
 
   const isSearching = search.query.length >= 2
@@ -100,22 +114,19 @@ export function UnifiedView() {
       return
     }
 
-    // Manual instruction (not clickable)
-    if (result.content.contentId === 'MANUAL_SEARCH_REQUIRED' || result.content?.metadata?.instructions) {
+    // Manual instruction (not clickable) - check via Roku-specific metadata
+    if (result.content.contentId === 'MANUAL_SEARCH_REQUIRED') {
+      return
+    }
+    if ('metadata' in result.content && (result.content as any).metadata?.instructions) {
       return
     }
 
-    const inLibrary = library.isInLibrary(
-      result.content.channelId,
-      result.content.contentId
-    )
+    const inLibrary = library.isInLibrary(result.plugin, result.content)
 
     if (inLibrary) {
       // Copy existing play URL
-      const libItem = library.getLibraryItem(
-        result.content.channelId,
-        result.content.contentId
-      )
+      const libItem = library.getLibraryItem(result.plugin, result.content)
       if (libItem?.playUrl) {
         try {
           await copyToClipboard(resolvePlayUrl(libItem.playUrl))
@@ -219,36 +230,63 @@ export function UnifiedView() {
             </Box>
           )}
 
-          <TextField
-            fullWidth
-            value={search.query}
-            onChange={(e) => search.updateQuery(e.target.value)}
-            placeholder="Search for movies, shows, or paste a URL..."
-            variant="outlined"
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#999', fontSize: 28 }} />
-                </InputAdornment>
-              ),
-              sx: {
-                background: 'rgba(255, 255, 255, 0.1)',
-                borderRadius: 2,
-                '& .MuiOutlinedInput-notchedOutline': {
-                  border: '2px solid rgba(255, 255, 255, 0.2)'
-                },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  border: '2px solid rgba(255, 255, 255, 0.4)'
-                },
-                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                  border: '2px solid #E50914'
-                },
-                color: '#fff',
-                fontSize: '1.1rem',
-                py: 1
-              }
-            }}
-          />
+          {authStatus?.available && !authStatus.authenticated ? (
+            <Box sx={{ py: 4 }}>
+              <Typography variant="body1" sx={{ color: '#999', mb: 2 }}>
+                Connect your {search.selectedPlugin} account to search and play
+              </Typography>
+              <Button
+                variant="contained"
+                href={`/auth/${search.selectedPlugin}`}
+                sx={{
+                  bgcolor: sourceColors[search.selectedPlugin.charAt(0).toUpperCase() + search.selectedPlugin.slice(1)] || '#E50914',
+                  color: '#fff',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1rem',
+                  '&:hover': {
+                    bgcolor: sourceColors[search.selectedPlugin.charAt(0).toUpperCase() + search.selectedPlugin.slice(1)] || '#B8070F',
+                    filter: 'brightness(0.85)'
+                  }
+                }}
+              >
+                Connect {search.selectedPlugin.charAt(0).toUpperCase() + search.selectedPlugin.slice(1)}
+              </Button>
+            </Box>
+          ) : (
+            <TextField
+              fullWidth
+              value={search.query}
+              onChange={(e) => search.updateQuery(e.target.value)}
+              placeholder="Search for movies, shows, or paste a URL..."
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: '#999', fontSize: 28 }} />
+                  </InputAdornment>
+                ),
+                sx: {
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: '2px solid rgba(255, 255, 255, 0.2)'
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
+                    border: '2px solid rgba(255, 255, 255, 0.4)'
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    border: '2px solid #E50914'
+                  },
+                  color: '#fff',
+                  fontSize: '1.1rem',
+                  py: 1
+                }
+              }}
+            />
+          )}
         </Box>
 
         {/* Section Header */}
@@ -284,18 +322,14 @@ export function UnifiedView() {
           }}>
             {deduplicatedResults.map((result, idx) => (
               <MediaCard
-                key={`${result.content.channelId}-${result.content.contentId}-${idx}`}
+                key={`${result.plugin}-${result.content.contentId}-${idx}`}
                 title={result.title}
-                channelName={result.content.channelName}
-                channelId={result.content.channelId}
-                contentId={result.content.contentId}
+                subtitle={getSourceName(result.plugin, result.content)}
                 description={result.description}
                 mediaType={result.content.mediaType}
-                instructions={result.content?.metadata?.instructions}
-                isInLibrary={library.isInLibrary(
-                  result.content.channelId,
-                  result.content.contentId
-                )}
+                instructions={'metadata' in result.content ? (result.content as any).metadata?.instructions : undefined}
+                accentColor={getSourceColor(result.plugin, result.content)}
+                isInLibrary={library.isInLibrary(result.plugin, result.content)}
                 isManualSearchTile={result.content.contentId === 'MANUAL_SEARCH_TILE'}
                 onClick={() => handleCardClick(result)}
                 index={idx}
@@ -327,11 +361,10 @@ export function UnifiedView() {
               <MediaCard
                 key={item.uuid}
                 title={item.parsedContent?.title || item.parsedContent?.contentId || 'Untitled'}
-                channelName={item.parsedContent?.channelName}
-                channelId={item.parsedContent?.channelId || ''}
-                contentId={item.parsedContent?.contentId || ''}
-                description={item.parsedContent?.metadata?.description || item.parsedContent?.metadata?.overview}
+                subtitle={getSourceName(item.plugin, item.parsedContent)}
+                description={'metadata' in (item.parsedContent || {}) ? ((item.parsedContent as any)?.metadata?.description || (item.parsedContent as any)?.metadata?.overview) : undefined}
                 mediaType={item.parsedContent?.mediaType}
+                accentColor={getSourceColor(item.plugin, item.parsedContent)}
                 isInLibrary={true}
                 onClick={() => handleLibraryCardClick(item)}
                 index={idx}
@@ -407,7 +440,7 @@ export function UnifiedView() {
                       label={channel.channelName}
                       size="small"
                       sx={{
-                        bgcolor: channelColors[channel.channelName] || '#666',
+                        bgcolor: sourceColors[channel.channelName] || '#666',
                         color: '#fff',
                         fontWeight: 600
                       }}
