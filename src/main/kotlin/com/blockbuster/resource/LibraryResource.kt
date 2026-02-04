@@ -6,7 +6,9 @@ import com.blockbuster.media.MediaStore
 import com.blockbuster.plugin.MediaPluginManager
 import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.Consumes
+import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
+import jakarta.ws.rs.PATCH
 import jakarta.ws.rs.POST
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
@@ -22,13 +24,16 @@ import org.slf4j.LoggerFactory
 class LibraryResource(
     private val pluginManager: MediaPluginManager,
     private val mediaStore: MediaStore,
-    private val baseUrl: String = "http://localhost:8080",
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     data class AddByPluginRequest(
         val content: Map<String, Any>,
         val uuid: String? = null,
+    )
+
+    data class RenameRequest(
+        val title: String,
     )
 
     @GET
@@ -46,7 +51,7 @@ class LibraryResource(
 
         return Response.ok(
             mapOf(
-                "items" to items.map { it.toResponseMap(baseUrl) },
+                "items" to items.map { it.toResponseMap() },
                 "page" to p,
                 "pageSize" to ps,
                 "total" to total,
@@ -73,7 +78,7 @@ class LibraryResource(
                     mediaStore.update(it, pluginName.lowercase(), typed)
                 } ?: mediaStore.put(pluginName.lowercase(), typed)
 
-            val blockbusterUrl = "${baseUrl.trimEnd('/')}/play/$assignedUuid"
+            val blockbusterUrl = "/play/$assignedUuid"
 
             logger.info("Stored content for plugin={} uuid={}", pluginName, assignedUuid)
             Response.ok(
@@ -96,13 +101,75 @@ class LibraryResource(
                 .build()
         }
     }
+    @DELETE
+    @Path("/{uuid}")
+    fun delete(
+        @PathParam("uuid") uuid: String,
+    ): Response {
+        return try {
+            mediaStore.get(uuid)
+                ?: return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Item not found"))
+                    .build()
+            mediaStore.remove(uuid)
+            logger.info("Deleted library item uuid={}", uuid)
+            Response.ok(mapOf("deleted" to true)).build()
+        } catch (e: Exception) {
+            logger.error("Failed to delete library item: {}", e.message, e)
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(mapOf("error" to "Failed to delete item"))
+                .build()
+        }
+    }
+
+    @PATCH
+    @Path("/{uuid}/rename")
+    fun rename(
+        @PathParam("uuid") uuid: String,
+        request: RenameRequest,
+    ): Response {
+        return try {
+            val item = mediaStore.get(uuid)
+                ?: return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Item not found"))
+                    .build()
+
+            val jsonMap: MutableMap<String, Any?> = MediaJson.mapper.readValue(
+                item.configJson,
+                MediaJson.mapper.typeFactory.constructMapType(
+                    MutableMap::class.java,
+                    String::class.java,
+                    Any::class.java,
+                ),
+            )
+            jsonMap["title"] = request.title
+
+            val plugin = pluginManager.getPlugin(item.plugin)
+                ?: return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(mapOf("error" to "Unknown plugin: ${item.plugin}"))
+                    .build()
+
+            val parser = plugin.getContentParser()
+            val updatedJson = MediaJson.mapper.writeValueAsString(jsonMap)
+            val typed = parser.fromJson(updatedJson)
+            mediaStore.update(uuid, item.plugin, typed)
+
+            logger.info("Renamed library item uuid={} to '{}'", uuid, request.title)
+            Response.ok(mapOf("uuid" to uuid, "title" to request.title)).build()
+        } catch (e: Exception) {
+            logger.error("Failed to rename library item: {}", e.message, e)
+            Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(mapOf("error" to "Failed to rename item"))
+                .build()
+        }
+    }
 }
 
-private fun MediaItem.toResponseMap(baseUrl: String): Map<String, Any?> =
+private fun MediaItem.toResponseMap(): Map<String, Any?> =
     mapOf(
         "plugin" to plugin,
         "uuid" to uuid,
         "configJson" to configJson,
         "updatedAt" to updatedAt.toString(),
-        "playUrl" to "${baseUrl.trimEnd('/')}/play/$uuid",
+        "playUrl" to "/play/$uuid",
     )

@@ -11,7 +11,7 @@ cp config.yml.example config.yml    # edit with your device IPs and API keys
 docker compose up --build
 ```
 
-Frontend: http://localhost:8586 | API: http://localhost:8585
+Frontend: http://localhost:8585 | API: http://localhost:8585
 
 ### Local Development
 
@@ -33,7 +33,7 @@ Frontend (terminal 2):
 cd frontend && npm install && npm run dev
 ```
 
-Backend: http://localhost:8585 | Frontend: http://localhost:8586
+Backend: http://localhost:8584 | Frontend: http://localhost:8585
 
 ## Build & Test
 
@@ -68,4 +68,4 @@ docker compose down             # stop
 docker compose up --build -d    # start detached
 ```
 
-Frontend on :8586 (nginx), backend API on :8585, both accessible from localhost.
+Frontend and backend both served on :8585.

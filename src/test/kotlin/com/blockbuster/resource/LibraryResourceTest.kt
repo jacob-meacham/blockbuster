@@ -20,7 +20,7 @@ class LibraryResourceTest {
     fun setUp() {
         pluginManager = mock()
         mediaStore = mock()
-        libraryResource = LibraryResource(pluginManager, mediaStore, "http://blockbuster.local:8585")
+        libraryResource = LibraryResource(pluginManager, mediaStore)
     }
 
     @Test
@@ -62,7 +62,7 @@ class LibraryResourceTest {
         val responseMap = response.entity as Map<String, String>
 
         assertEquals(uuid, responseMap["uuid"])
-        assertEquals("http://blockbuster.local:8585/play/$uuid", responseMap["url"])
+        assertEquals("/play/$uuid", responseMap["url"])
     }
 
     @Test
@@ -119,10 +119,10 @@ class LibraryResourceTest {
     fun `URL format is correct`() {
         // Given
         val uuid = "abc-123-def"
-        val expectedUrl = "http://blockbuster.local:8585/play/$uuid"
+        val expectedUrl = "/play/$uuid"
 
         // Just verify the format matches what we expect
-        assertTrue(expectedUrl.startsWith("http://blockbuster.local:8585/play/"))
+        assertTrue(expectedUrl.startsWith("/play/"))
         assertTrue(expectedUrl.endsWith(uuid))
     }
 }

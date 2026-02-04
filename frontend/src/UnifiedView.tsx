@@ -22,12 +22,29 @@ import {
 import SearchIcon from '@mui/icons-material/Search'
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline'
 import CloseIcon from '@mui/icons-material/Close'
+import ListAltIcon from '@mui/icons-material/ListAlt'
+import { Link as RouterLink } from 'react-router-dom'
 import { useSearch } from './hooks/useSearch'
 import { useLibrary } from './hooks/useLibrary'
-import { fetchPlugins, fetchChannels } from './api'
+import { fetchPlugins, fetchChannels, resolvePlayUrl } from './api'
 import { MediaCard } from './components/MediaCard'
 import type { PluginInfo, ChannelInfo, SearchResult } from './types'
 import { channelColors } from './types'
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text)
+  }
+  // Fallback for non-secure contexts (HTTP)
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.style.position = 'fixed'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+  textarea.select()
+  document.execCommand('copy')
+  document.body.removeChild(textarea)
+}
 
 export function UnifiedView() {
   const search = useSearch()
@@ -42,12 +59,43 @@ export function UnifiedView() {
   }>({ open: false, message: '', severity: 'success' })
 
   React.useEffect(() => {
-    fetchPlugins().then(setPlugins).catch(console.error)
+    fetchPlugins().then((p) => {
+      setPlugins(p)
+      // Default to first plugin if no plugin selected yet
+      if (p.length > 0 && search.selectedPlugin === '') {
+        search.setSelectedPlugin(p[0].name)
+      }
+    }).catch(console.error)
     fetchChannels().then(setChannels).catch(console.error)
   }, [])
 
   const isSearching = search.query.length >= 2
   const isLoading = isSearching ? search.loading : library.loading
+
+  // Deduplicate search results by channelId+contentId, preferring plugin results over brave
+  const deduplicatedResults = React.useMemo(() => {
+    const byKey = new Map<string, number>()
+    search.results.forEach((result, idx) => {
+      const channelId = result.content?.channelId || result.channelId
+      const contentId = result.content?.contentId || result.contentId
+      if (!channelId || !contentId) return
+      const key = `${channelId}-${contentId}`
+      const existing = byKey.get(key)
+      if (existing === undefined) {
+        byKey.set(key, idx)
+      } else if (!result.url && search.results[existing].url) {
+        // Prefer plugin result (no url) over brave result (has url)
+        byKey.set(key, idx)
+      }
+    })
+    const keepIndices = new Set(byKey.values())
+    return search.results.filter((result, idx) => {
+      const channelId = result.content?.channelId || result.channelId
+      const contentId = result.content?.contentId || result.contentId
+      if (!channelId || !contentId) return true
+      return keepIndices.has(idx)
+    })
+  }, [search.results])
 
   async function handleCardClick(result: SearchResult) {
     // Manual search tile
@@ -74,7 +122,7 @@ export function UnifiedView() {
       )
       if (libItem?.playUrl) {
         try {
-          await navigator.clipboard.writeText(libItem.playUrl)
+          await copyToClipboard(resolvePlayUrl(libItem.playUrl))
           setSnackbar({ open: true, message: 'Copied play URL to clipboard', severity: 'success' })
         } catch {
           setSnackbar({ open: true, message: 'Failed to copy URL', severity: 'error' })
@@ -84,7 +132,7 @@ export function UnifiedView() {
       // Add to library
       try {
         const url = await library.addItem(result)
-        await navigator.clipboard.writeText(url)
+        await copyToClipboard(resolvePlayUrl(url))
         setSnackbar({ open: true, message: 'Added to library — play URL copied', severity: 'success' })
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e)
@@ -95,7 +143,7 @@ export function UnifiedView() {
 
   function handleLibraryCardClick(item: { playUrl: string }) {
     if (item.playUrl) {
-      navigator.clipboard.writeText(item.playUrl).then(() => {
+      copyToClipboard(resolvePlayUrl(item.playUrl)).then(() => {
         setSnackbar({ open: true, message: 'Copied play URL to clipboard', severity: 'success' })
       }).catch(() => {
         setSnackbar({ open: true, message: 'Failed to copy URL', severity: 'error' })
@@ -111,6 +159,17 @@ export function UnifiedView() {
       pb: 8
     }}>
       <Container maxWidth="lg">
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: -2 }}>
+          <IconButton
+            component={RouterLink}
+            to="/library"
+            sx={{ color: '#999', '&:hover': { color: '#fff' } }}
+            title="Library"
+          >
+            <ListAltIcon />
+          </IconButton>
+        </Box>
+
         {/* Hero Search */}
         <Box sx={{ mb: 6, textAlign: 'center' }}>
           <Typography
@@ -155,7 +214,6 @@ export function UnifiedView() {
                   }
                 }}
               >
-                <ToggleButton value="all">All Sources</ToggleButton>
                 {plugins.map((plugin) => (
                   <ToggleButton key={plugin.name} value={plugin.name}>
                     {plugin.name.charAt(0).toUpperCase() + plugin.name.slice(1)}
@@ -209,33 +267,32 @@ export function UnifiedView() {
 
         {/* Loading Skeletons */}
         {isLoading && (
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 3 }}>
-            {[1, 2, 3, 4, 5, 6].map((i) => (
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 1.5 }}>
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <Skeleton
                 key={i}
                 variant="rectangular"
-                height={400}
-                sx={{ bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2 }}
+                height={72}
+                sx={{ bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 1.5 }}
               />
             ))}
           </Box>
         )}
 
         {/* Search Results */}
-        {!isLoading && isSearching && search.results.length > 0 && (
+        {!isLoading && isSearching && deduplicatedResults.length > 0 && (
           <Box sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 3
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: 1.5
           }}>
-            {search.results.map((result, idx) => (
+            {deduplicatedResults.map((result, idx) => (
               <MediaCard
                 key={`${result.channelId}-${result.contentId}-${idx}`}
                 title={result.title}
                 channelName={result.channelName}
                 channelId={result.channelId}
                 contentId={result.contentId}
-                imageUrl={result.imageUrl}
                 description={result.description}
                 mediaType={result.mediaType}
                 instructions={result.content?.metadata?.instructions}
@@ -252,7 +309,7 @@ export function UnifiedView() {
         )}
 
         {/* Empty Search State */}
-        {!isLoading && isSearching && search.results.length === 0 && (
+        {!isLoading && isSearching && deduplicatedResults.length === 0 && (
           <Box sx={{ textAlign: 'center', py: 8 }}>
             <Typography variant="h5" sx={{ color: '#666', mb: 2 }}>
               No results found
@@ -267,8 +324,8 @@ export function UnifiedView() {
         {!isLoading && !isSearching && library.libraryItems.length > 0 && (
           <Box sx={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: 3
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: 1.5
           }}>
             {library.libraryItems.map((item, idx) => (
               <MediaCard
@@ -277,7 +334,6 @@ export function UnifiedView() {
                 channelName={item.parsedContent?.channelName}
                 channelId={item.parsedContent?.channelId || ''}
                 contentId={item.parsedContent?.contentId || ''}
-                imageUrl={item.parsedContent?.metadata?.imageUrl}
                 description={item.parsedContent?.metadata?.description || item.parsedContent?.metadata?.overview}
                 mediaType={item.parsedContent?.mediaType}
                 isInLibrary={true}

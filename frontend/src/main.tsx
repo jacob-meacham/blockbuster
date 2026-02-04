@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { CssBaseline, createTheme, ThemeProvider } from '@mui/material'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { UnifiedView } from './UnifiedView'
+import { LibraryView } from './LibraryView'
 
 const darkTheme = createTheme({
   palette: {
@@ -28,6 +29,7 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/search" element={<UnifiedView />} />
+            <Route path="/library" element={<LibraryView />} />
             <Route path="/" element={<UnifiedView />} />
           </Routes>
         </BrowserRouter>

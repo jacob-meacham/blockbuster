@@ -1,5 +1,11 @@
 import type { SearchResult, LibraryItem, PluginInfo, ChannelInfo } from './types'
 
+/** Resolve a relative play URL path to an absolute URL using the current origin. */
+export function resolvePlayUrl(path: string): string {
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${window.location.origin}${path}`
+}
+
 export async function searchAll(query: string, plugin?: string): Promise<SearchResult[]> {
   const pluginParam = plugin && plugin !== 'all' ? `&plugin=${plugin}` : ''
   const resp = await fetch(`/search/all?q=${encodeURIComponent(query)}${pluginParam}`)
@@ -41,6 +47,26 @@ export async function addToLibrary(
     throw new Error(data.error || 'Failed to add to library')
   }
   return resp.json()
+}
+
+export async function deleteLibraryItem(uuid: string): Promise<void> {
+  const resp = await fetch(`/library/${uuid}`, { method: 'DELETE' })
+  if (!resp.ok) {
+    const data = await resp.json()
+    throw new Error(data.error || 'Failed to delete item')
+  }
+}
+
+export async function renameLibraryItem(uuid: string, title: string): Promise<void> {
+  const resp = await fetch(`/library/${uuid}/rename`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title })
+  })
+  if (!resp.ok) {
+    const data = await resp.json()
+    throw new Error(data.error || 'Failed to rename item')
+  }
 }
 
 export async function fetchPlugins(): Promise<PluginInfo[]> {

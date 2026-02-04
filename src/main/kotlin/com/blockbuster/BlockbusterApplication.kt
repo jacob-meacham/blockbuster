@@ -114,7 +114,7 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         // Register resources
         environment.jersey().register(HealthResource(flywayManager, dataSource))
         environment.jersey().register(SearchResource(pluginManager))
-        environment.jersey().register(LibraryResource(pluginManager, mediaStore, configuration.baseUrl))
+        environment.jersey().register(LibraryResource(pluginManager, mediaStore))
         environment.jersey().register(PlayResource(mediaStore, pluginManager, theaterManager))
         environment.jersey().register(FrontendResource())
 

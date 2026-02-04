@@ -12,9 +12,6 @@ class BlockbusterConfiguration : Configuration() {
     @JsonProperty("database")
     var database: DatabaseConfiguration = DatabaseConfiguration()
 
-    @JsonProperty("baseUrl")
-    var baseUrl: String = "http://localhost:8080"
-
     @JsonProperty("plugins")
     var plugins: List<PluginDefinition> = emptyList()
 

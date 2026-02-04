@@ -6,7 +6,7 @@ import { searchAll } from '../api'
 export function useSearch() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [query, setQuery] = useState(searchParams.get('q') || '')
-  const [selectedPlugin, setSelectedPlugin] = useState<string>('all')
+  const [selectedPlugin, setSelectedPlugin] = useState<string>('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
@@ -33,7 +33,7 @@ export function useSearch() {
     searchTimeoutRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const plugin = selectedPlugin !== 'all' ? selectedPlugin : undefined
+        const plugin = selectedPlugin || undefined
         const data = await searchAll(query, plugin)
         setResults(data)
       } catch (e) {

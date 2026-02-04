@@ -15,7 +15,14 @@ export default defineConfig(({ mode }) => {
         '/search/plugins': `http://localhost:${backendPort}`,
         '/search/channels': `http://localhost:${backendPort}`,
         '/search/roku': `http://localhost:${backendPort}`,
-        '/library': `http://localhost:${backendPort}`,
+        '/library': {
+          target: `http://localhost:${backendPort}`,
+          bypass(req) {
+            if (req.headers.accept?.includes('text/html')) {
+              return '/index.html'
+            }
+          }
+        },
         '/play': `http://localhost:${backendPort}`,
         '/health': `http://localhost:${backendPort}`,
       }

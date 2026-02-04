@@ -37,6 +37,16 @@ class FrontendResource {
     fun index(): Response = serveIndexHtml()
 
     @GET
+    @Path("library")
+    @Produces(MediaType.TEXT_HTML)
+    fun library(): Response = serveIndexHtml()
+
+    @GET
+    @Path("search")
+    @Produces(MediaType.TEXT_HTML)
+    fun search(): Response = serveIndexHtml()
+
+    @GET
     @Path("assets/{path:.*}")
     fun staticAsset(@PathParam("path") path: String): Response {
         val resourcePath = "frontend/assets/$path"
