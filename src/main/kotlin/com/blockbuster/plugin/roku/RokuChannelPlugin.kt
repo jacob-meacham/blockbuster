@@ -37,12 +37,10 @@ interface RokuChannelPlugin {
 
     /**
      * Builds the playback command for this channel.
-     * Returns either a deep link URL or an action sequence.
+     * Returns either a deep link or an action sequence.
+     * Channel plugins do not know about device addressing — RokuPlugin resolves the IP.
      */
-    fun buildPlaybackCommand(
-        content: RokuMediaContent,
-        rokuDeviceIp: String,
-    ): RokuPlaybackCommand
+    fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand
 
     /**
      * Search for content on this channel.
@@ -70,10 +68,10 @@ interface RokuChannelPlugin {
  */
 sealed class RokuPlaybackCommand {
     /**
-     * Deep link URL that can be sent directly to Roku ECP
-     * Example: http://192.168.1.252:8060/launch/44191?Command=PlayNow&ItemIds=541
+     * Deep link that can be sent to Roku ECP.
+     * RokuPlugin resolves channelId + params into a full URL using the device IP.
      */
-    data class DeepLink(val url: String) : RokuPlaybackCommand()
+    data class DeepLink(val channelId: String, val params: String) : RokuPlaybackCommand()
 
     /**
      * Action sequence to navigate the channel UI
@@ -96,22 +94,22 @@ sealed class RokuAction {
 }
 
 /**
- * Roku remote control keys
+ * Roku remote control keys, each carrying its ECP protocol name.
  */
-enum class RokuKey {
-    HOME,
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-    SELECT,
-    BACK,
-    BACKSPACE,
-    PLAY,
-    PAUSE,
-    REV,
-    FWD,
-    INSTANT_REPLAY,
-    INFO,
-    SEARCH,
+enum class RokuKey(val ecpName: String) {
+    HOME("Home"),
+    UP("Up"),
+    DOWN("Down"),
+    LEFT("Left"),
+    RIGHT("Right"),
+    SELECT("Select"),
+    BACK("Back"),
+    BACKSPACE("Backspace"),
+    PLAY("Play"),
+    PAUSE("Pause"),
+    REV("Rev"),
+    FWD("Fwd"),
+    INSTANT_REPLAY("InstantReplay"),
+    INFO("Info"),
+    SEARCH("Search"),
 }

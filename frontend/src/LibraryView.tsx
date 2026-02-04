@@ -181,10 +181,6 @@ export function LibraryView() {
         source: 'manual',
         plugin: addPlugin,
         title: addTitle.trim(),
-        channelId: addChannel,
-        channelName: channel?.channelName,
-        contentId: addContentId.trim(),
-        mediaType: addMediaType,
         content: {
           channelName: channel?.channelName || '',
           channelId: addChannel,

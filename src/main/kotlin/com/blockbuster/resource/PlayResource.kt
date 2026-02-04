@@ -1,7 +1,7 @@
 package com.blockbuster.resource
 
 import com.blockbuster.media.MediaStore
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.theater.TheaterDeviceManager
 import com.blockbuster.theater.TheaterSetupException
 import jakarta.ws.rs.GET
@@ -23,9 +23,18 @@ import org.slf4j.LoggerFactory
 @Produces(MediaType.APPLICATION_JSON)
 class PlayResource(
     private val mediaStore: MediaStore,
-    private val pluginManager: MediaPluginManager,
+    private val plugins: PluginRegistry,
     private val theaterManager: TheaterDeviceManager,
 ) {
+    companion object {
+        fun escapeHtml(s: String): String =
+            s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#x27;")
+    }
+
     private val logger = LoggerFactory.getLogger(javaClass)
 
     /**
@@ -38,14 +47,16 @@ class PlayResource(
     fun playPage(
         @PathParam("uuid") uuid: String,
     ): String {
+        val safeUuid = escapeHtml(uuid)
+
         val mediaItem =
             mediaStore.get(uuid)
                 ?: return loadTemplate("not-found.html")
-                    .replace("{{uuid}}", uuid)
+                    .replace("{{uuid}}", safeUuid)
 
         return loadTemplate("play.html")
-            .replace("{{uuid}}", uuid)
-            .replace("{{plugin}}", mediaItem.plugin)
+            .replace("{{uuid}}", safeUuid)
+            .replace("{{plugin}}", escapeHtml(mediaItem.plugin))
     }
 
     private fun loadTemplate(name: String): String {
@@ -64,7 +75,7 @@ class PlayResource(
         @PathParam("uuid") uuid: String,
         @QueryParam("deviceId") deviceId: String?,
     ): Response {
-        logger.info("Play request: uuid=$uuid deviceId=$deviceId")
+        logger.info("Play request: uuid={} deviceId={}", uuid, deviceId)
 
         val mediaItem =
             mediaStore.get(uuid)
@@ -73,7 +84,7 @@ class PlayResource(
                     .build()
 
         val plugin =
-            pluginManager.getPlugin(mediaItem.plugin)
+            plugins[mediaItem.plugin]
                 ?: return Response.status(Response.Status.NOT_FOUND)
                     .entity(mapOf("error" to "Plugin not found", "plugin" to mediaItem.plugin))
                     .build()
@@ -81,7 +92,7 @@ class PlayResource(
         return try {
             // Execute theater setup if device specified (best-effort)
             deviceId?.let {
-                logger.info("Setting up theater for device: $it")
+                logger.info("Setting up theater for device: {}", it)
                 try {
                     theaterManager.setupTheater(it)
                 } catch (e: TheaterSetupException) {
@@ -90,7 +101,7 @@ class PlayResource(
             }
 
             // Execute playback
-            logger.info("Starting playback via plugin: ${mediaItem.plugin}")
+            logger.info("Starting playback via plugin: {}", mediaItem.plugin)
             plugin.play(uuid)
 
             Response.ok(
@@ -103,12 +114,12 @@ class PlayResource(
             ).build()
         } catch (e: IllegalArgumentException) {
             // Unknown deviceId
-            logger.error("Invalid device: ${e.message}")
+            logger.error("Invalid device: {}", e.message)
             Response.status(Response.Status.BAD_REQUEST)
                 .entity(mapOf("error" to e.message))
                 .build()
         } catch (e: Exception) {
-            logger.error("Playback failed: ${e.message}", e)
+            logger.error("Playback failed: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                 .entity(mapOf("error" to (e.message ?: "Playback failed")))
                 .build()

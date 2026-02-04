@@ -49,14 +49,48 @@ class PluginException(message: String, cause: Throwable? = null) : Exception(mes
 
 /**
  * Generic search result wrapper for plugins.
- * - title: human-readable title
- * - url: deep link to media within provider (if applicable)
- * - mediaUrl: direct media URL/URI if available (optional)
- * - content: strongly typed plugin-specific content object used by our system
+ *
+ * Plugin-specific data lives on [content]. Only generic display fields belong here.
+ * Plugins set [dedupKey] so the resource layer can deduplicate across sources
+ * without knowing the content type (e.g. Roku uses "channelId-contentId").
  */
 data class SearchResult<T>(
     val title: String,
     val url: String? = null,
     val mediaUrl: String? = null,
     val content: T,
+    val source: String? = null,
+    val description: String? = null,
+    val imageUrl: String? = null,
+    val dedupKey: String? = null,
 )
+
+/**
+ * Implemented by plugins that expose channel info (e.g., Roku channel plugins).
+ * Lets the resource layer query channel metadata without runtime type-casting.
+ */
+interface ChannelInfoProvider {
+    fun getChannelInfo(): List<ChannelInfoItem>
+}
+
+data class ChannelInfoItem(
+    val channelId: String,
+    val channelName: String,
+    val searchUrl: String,
+)
+
+/**
+ * Immutable registry of plugins keyed by name.
+ * Wraps the generic map so Jersey resource constructors don't expose wildcard types.
+ */
+class PluginRegistry(private val plugins: Map<String, MediaPlugin<*>>) {
+    operator fun get(name: String): MediaPlugin<*>? = plugins[name]
+
+    val values: Collection<MediaPlugin<*>> get() = plugins.values
+
+    val keys: Set<String> get() = plugins.keys
+
+    val size: Int get() = plugins.size
+
+    fun isEmpty(): Boolean = plugins.isEmpty()
+}

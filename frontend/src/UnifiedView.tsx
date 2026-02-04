@@ -72,14 +72,12 @@ export function UnifiedView() {
   const isSearching = search.query.length >= 2
   const isLoading = isSearching ? search.loading : library.loading
 
-  // Deduplicate search results by channelId+contentId, preferring plugin results over brave
+  // Deduplicate search results by dedupKey, preferring plugin results over brave
   const deduplicatedResults = React.useMemo(() => {
     const byKey = new Map<string, number>()
     search.results.forEach((result, idx) => {
-      const channelId = result.content?.channelId || result.channelId
-      const contentId = result.content?.contentId || result.contentId
-      if (!channelId || !contentId) return
-      const key = `${channelId}-${contentId}`
+      const key = result.dedupKey
+      if (!key) return
       const existing = byKey.get(key)
       if (existing === undefined) {
         byKey.set(key, idx)
@@ -90,35 +88,33 @@ export function UnifiedView() {
     })
     const keepIndices = new Set(byKey.values())
     return search.results.filter((result, idx) => {
-      const channelId = result.content?.channelId || result.channelId
-      const contentId = result.content?.contentId || result.contentId
-      if (!channelId || !contentId) return true
+      if (!result.dedupKey) return true
       return keepIndices.has(idx)
     })
   }, [search.results])
 
   async function handleCardClick(result: SearchResult) {
     // Manual search tile
-    if (result.contentId === 'MANUAL_SEARCH_TILE') {
+    if (result.content.contentId === 'MANUAL_SEARCH_TILE') {
       setManualDialogOpen(true)
       return
     }
 
     // Manual instruction (not clickable)
-    if (result.contentId === 'MANUAL_SEARCH_REQUIRED' || result.content?.metadata?.instructions) {
+    if (result.content.contentId === 'MANUAL_SEARCH_REQUIRED' || result.content?.metadata?.instructions) {
       return
     }
 
     const inLibrary = library.isInLibrary(
-      result.content?.channelId || result.channelId,
-      result.content?.contentId || result.contentId
+      result.content.channelId,
+      result.content.contentId
     )
 
     if (inLibrary) {
       // Copy existing play URL
       const libItem = library.getLibraryItem(
-        result.content?.channelId || result.channelId,
-        result.content?.contentId || result.contentId
+        result.content.channelId,
+        result.content.contentId
       )
       if (libItem?.playUrl) {
         try {
@@ -288,19 +284,19 @@ export function UnifiedView() {
           }}>
             {deduplicatedResults.map((result, idx) => (
               <MediaCard
-                key={`${result.channelId}-${result.contentId}-${idx}`}
+                key={`${result.content.channelId}-${result.content.contentId}-${idx}`}
                 title={result.title}
-                channelName={result.channelName}
-                channelId={result.channelId}
-                contentId={result.contentId}
+                channelName={result.content.channelName}
+                channelId={result.content.channelId}
+                contentId={result.content.contentId}
                 description={result.description}
-                mediaType={result.mediaType}
+                mediaType={result.content.mediaType}
                 instructions={result.content?.metadata?.instructions}
                 isInLibrary={library.isInLibrary(
-                  result.content?.channelId || result.channelId,
-                  result.content?.contentId || result.contentId
+                  result.content.channelId,
+                  result.content.contentId
                 )}
-                isManualSearchTile={result.contentId === 'MANUAL_SEARCH_TILE'}
+                isManualSearchTile={result.content.contentId === 'MANUAL_SEARCH_TILE'}
                 onClick={() => handleCardClick(result)}
                 index={idx}
               />

@@ -38,6 +38,7 @@ dependencies {
     // Database
     implementation("org.xerial:sqlite-jdbc:3.44.1.0")
     implementation("org.flywaydb:flyway-core:10.8.1")
+    implementation("com.zaxxer:HikariCP:5.1.0")
     
     // Roku ECP Wrapper - TODO: Add when available in Maven Central
     // implementation("com.github.wseemann:roku-ecp-wrapper-kotlin:1.3.0")
@@ -45,11 +46,15 @@ dependencies {
     // HTTP and networking
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+
     
     // Testing
     testImplementation("io.dropwizard:dropwizard-testing")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.1")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.1")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:5.10.1")
     testImplementation("org.mockito:mockito-core:5.8.0")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
@@ -77,6 +82,21 @@ tasks.jacocoTestReport {
         xml.required.set(true)
         html.required.set(true)
     }
+}
+
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.test)
+    violationRules {
+        rule {
+            limit {
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.named("check") {
+    dependsOn("jacocoTestCoverageVerification")
 }
 
 tasks.test {

@@ -3,7 +3,7 @@ package com.blockbuster.resource
 import com.blockbuster.media.MediaItem
 import com.blockbuster.media.MediaStore
 import com.blockbuster.plugin.MediaPlugin
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.theater.TheaterDeviceManager
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions.*
@@ -14,16 +14,16 @@ import java.time.Instant
 
 class PlayResourceTest {
     private lateinit var mediaStore: MediaStore
-    private lateinit var pluginManager: MediaPluginManager
+    private lateinit var plugins: MutableMap<String, MediaPlugin<*>>
     private lateinit var theaterManager: TheaterDeviceManager
     private lateinit var playResource: PlayResource
 
     @BeforeEach
     fun setUp() {
         mediaStore = mock()
-        pluginManager = mock()
+        plugins = mutableMapOf()
         theaterManager = mock()
-        playResource = PlayResource(mediaStore, pluginManager, theaterManager)
+        playResource = PlayResource(mediaStore, PluginRegistry(plugins), theaterManager)
     }
 
     @Test
@@ -41,7 +41,7 @@ class PlayResourceTest {
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
 
         // When
         val response = playResource.play(uuid, null)
@@ -68,7 +68,7 @@ class PlayResourceTest {
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
 
         // When
         val response = playResource.play(uuid, deviceId)
@@ -90,7 +90,6 @@ class PlayResourceTest {
 
         // Then
         assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
-        verify(pluginManager, never()).getPlugin(any())
         verify(theaterManager, never()).setupTheater(any())
     }
 
@@ -108,7 +107,7 @@ class PlayResourceTest {
             )
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-        whenever(pluginManager.getPlugin("nonexistent-plugin")).thenReturn(null)
+        // plugins map does not contain "nonexistent-plugin"
 
         // When
         val response = playResource.play(uuid, null)
@@ -134,7 +133,7 @@ class PlayResourceTest {
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
         whenever(theaterManager.setupTheater(deviceId)).thenThrow(IllegalArgumentException("Unknown device: $deviceId"))
 
         // When
@@ -160,7 +159,7 @@ class PlayResourceTest {
         val mockPlugin = mock<MediaPlugin<*>>()
 
         whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
         whenever(mockPlugin.play(any())).thenThrow(RuntimeException("Playback failed"))
 
         // When
@@ -206,5 +205,61 @@ class PlayResourceTest {
         // Then
         assertTrue(html.contains("Content Not Found"))
         assertTrue(html.contains(uuid))
+    }
+
+    // ---------------------------------------------------------------
+    // XSS security tests
+    // ---------------------------------------------------------------
+
+    @Test
+    fun `playPage escapes HTML in UUID to prevent XSS for not-found content`() {
+        // Given
+        val xssUuid = "<script>alert(1)</script>"
+        whenever(mediaStore.get(xssUuid)).thenReturn(null)
+
+        // When
+        val html = playResource.playPage(xssUuid)
+
+        // Then - raw script tag must not appear; escaped form must be present
+        assertFalse(html.contains("<script>"), "Raw <script> tag should be escaped")
+        assertTrue(html.contains("&lt;script&gt;"), "Escaped script tag should be present")
+    }
+
+    @Test
+    fun `playPage escapes HTML in UUID for valid content`() {
+        // Given
+        val xssUuid = "test\"><img src=x onerror=alert(1)>"
+        val mediaItem =
+            MediaItem(
+                uuid = xssUuid,
+                plugin = "roku",
+                configJson = "{}",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+        whenever(mediaStore.get(xssUuid)).thenReturn(mediaItem)
+
+        // When
+        val html = playResource.playPage(xssUuid)
+
+        // Then — raw HTML tags must not appear; quotes must be escaped
+        assertFalse(html.contains("<img"), "Raw <img> tag should be escaped")
+        assertTrue(html.contains("&lt;img"), "Escaped <img> tag should be present")
+        assertTrue(html.contains("&quot;"), "Double quotes should be escaped")
+    }
+
+    @Test
+    fun `escapeHtml escapes all dangerous characters`() {
+        val input = """<script>alert("XSS's")</script> & more"""
+        val escaped = PlayResource.escapeHtml(input)
+
+        assertFalse(escaped.contains("<"))
+        assertFalse(escaped.contains(">"))
+        assertFalse(escaped.contains("\""))
+        assertTrue(escaped.contains("&lt;"))
+        assertTrue(escaped.contains("&gt;"))
+        assertTrue(escaped.contains("&quot;"))
+        assertTrue(escaped.contains("&#x27;"))
+        assertTrue(escaped.contains("&amp;"))
     }
 }

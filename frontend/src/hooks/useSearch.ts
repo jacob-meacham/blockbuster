@@ -35,6 +35,23 @@ export function useSearch() {
       try {
         const plugin = selectedPlugin || undefined
         const data = await searchAll(query, plugin)
+        // Append manual search tile when results exist (moved from backend)
+        if (data.length > 0 && (!plugin || plugin === 'roku')) {
+          data.push({
+            source: 'manual',
+            plugin: 'roku',
+            title: "Can't find it?",
+            description: 'Search manually on your streaming services',
+            content: {
+              channelName: 'Manual Search',
+              channelId: 'MANUAL',
+              contentId: 'MANUAL_SEARCH_TILE',
+              title: "Can't find it?",
+              mediaType: 'help',
+              metadata: { instructions: 'Search manually on your streaming services' },
+            },
+          })
+        }
         setResults(data)
       } catch (e) {
         console.error('Search failed:', e)

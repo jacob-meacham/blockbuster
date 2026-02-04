@@ -4,8 +4,9 @@ import com.blockbuster.db.FlywayManager
 import com.blockbuster.health.DatabaseHealthCheck
 import com.blockbuster.health.MediaPluginHealthCheck
 import com.blockbuster.media.SqliteMediaStore
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.MediaPlugin
 import com.blockbuster.plugin.PluginFactory
+import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.resource.FrontendResource
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.LibraryResource
@@ -15,14 +16,13 @@ import com.blockbuster.theater.DefaultTheaterHttpClient
 import com.blockbuster.theater.TheaterDeviceManager
 import com.blockbuster.theater.createTheaterHandler
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import io.dropwizard.core.Application
-import io.dropwizard.core.server.DefaultServerFactory
 import io.dropwizard.core.setup.Bootstrap
 import io.dropwizard.core.setup.Environment
-import io.dropwizard.jetty.HttpConnectorFactory
 import okhttp3.OkHttpClient
 import org.slf4j.LoggerFactory
-import org.sqlite.SQLiteDataSource
 
 class BlockbusterApplication : Application<BlockbusterConfiguration>() {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -66,41 +66,34 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
         configuration: BlockbusterConfiguration,
         environment: Environment,
     ) {
-        // Initialize database with Flyway
-        val dataSource =
-            SQLiteDataSource().apply {
-                url = configuration.database.jdbcUrl
-                setEnforceForeignKeys(true)
+        // Initialize database with HikariCP connection pool
+        val hikariConfig =
+            HikariConfig().apply {
+                jdbcUrl = configuration.database.jdbcUrl
+                maximumPoolSize = 5
+                addDataSourceProperty("enforceForeignKeys", "true")
             }
+        val dataSource = HikariDataSource(hikariConfig)
 
         val flywayManager = FlywayManager(dataSource, configuration.database.jdbcUrl)
         flywayManager.migrate()
 
         val mediaStore = SqliteMediaStore(dataSource)
 
-        // Create HTTP client for plugins
-        val httpClient = okhttp3.OkHttpClient()
-
-        // Create plugin factory
-        val braveApiKey = if (configuration.braveSearch.enabled) configuration.braveSearch.apiKey else null
-        val pluginFactory = PluginFactory(mediaStore, httpClient, braveApiKey)
+        // Create HTTP client for plugins and theater
+        val httpClient = OkHttpClient()
 
         // Create plugins from configuration
-        val plugins =
-            configuration.plugins.map { pluginDef ->
-                try {
-                    pluginFactory.createPlugin(pluginDef)
-                } catch (e: Exception) {
-                    logger.error("Failed to create plugin of type '{}': {}", pluginDef.type, e.message)
-                    throw e
-                }
-            }
+        val braveApiKey = if (configuration.braveSearch.enabled) configuration.braveSearch.apiKey else null
+        val pluginFactory = PluginFactory(mediaStore, httpClient, braveApiKey)
+        val plugins = createPlugins(configuration, pluginFactory)
 
-        // Create plugin manager
-        val pluginManager = MediaPluginManager(plugins)
+        // Build plugin registry
+        val registry = PluginRegistry(plugins.associateBy { it.getPluginName() })
+        logger.info("Loaded {} plugins: {}", registry.size, registry.keys)
 
         // Create theater device manager
-        val theaterHttpClient = DefaultTheaterHttpClient(java.net.http.HttpClient.newHttpClient())
+        val theaterHttpClient = DefaultTheaterHttpClient(httpClient)
         val theaterHandlers =
             configuration.appliances.mapValues { (_, appliance) ->
                 createTheaterHandler(appliance.theater, theaterHttpClient)
@@ -109,16 +102,37 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
 
         // Register health checks
         environment.healthChecks().register("database", DatabaseHealthCheck(dataSource))
-        environment.healthChecks().register("plugins", MediaPluginHealthCheck(pluginManager))
+        environment.healthChecks().register("plugins", MediaPluginHealthCheck(registry))
 
         // Register resources
         environment.jersey().register(HealthResource(flywayManager, dataSource))
-        environment.jersey().register(SearchResource(pluginManager))
-        environment.jersey().register(LibraryResource(pluginManager, mediaStore))
-        environment.jersey().register(PlayResource(mediaStore, pluginManager, theaterManager))
+        environment.jersey().register(SearchResource(registry))
+        environment.jersey().register(LibraryResource(registry, mediaStore))
+        environment.jersey().register(PlayResource(mediaStore, registry, theaterManager))
         environment.jersey().register(FrontendResource())
 
-        // Register managed objects for lifecycle management
+        // Register lifecycle shutdown hooks
+        registerLifecycle(environment, dataSource, httpClient)
+    }
+
+    private fun createPlugins(
+        configuration: BlockbusterConfiguration,
+        pluginFactory: PluginFactory,
+    ): List<MediaPlugin<*>> =
+        configuration.plugins.map { pluginDef ->
+            try {
+                pluginFactory.createPlugin(pluginDef)
+            } catch (e: Exception) {
+                logger.error("Failed to create plugin of type '{}': {}", pluginDef.type, e.message)
+                throw e
+            }
+        }
+
+    private fun registerLifecycle(
+        environment: Environment,
+        dataSource: HikariDataSource,
+        httpClient: OkHttpClient,
+    ) {
         environment.lifecycle().manage(
             object : io.dropwizard.lifecycle.Managed {
                 override fun start() {
@@ -126,31 +140,11 @@ class BlockbusterApplication : Application<BlockbusterConfiguration>() {
                 }
 
                 override fun stop() {
-                    // Close HTTP client
+                    dataSource.close()
                     httpClient.dispatcher.executorService.shutdown()
                     httpClient.connectionPool.evictAll()
                 }
             },
         )
-
-        // Extract port configuration for display
-        val serverFactory = configuration.serverFactory
-        val (appPort, adminPort) =
-            if (serverFactory is DefaultServerFactory) {
-                val applicationPort = (serverFactory.applicationConnectors.firstOrNull() as? HttpConnectorFactory)?.port ?: 8080
-                val adminPortValue = (serverFactory.adminConnectors.firstOrNull() as? HttpConnectorFactory)?.port ?: 8081
-                applicationPort to adminPortValue
-            } else {
-                8080 to 8081
-            }
-
-        logger.info("Blockbuster open for business!")
-        logger.info("Database initialized: {}", configuration.database.type)
-        logger.info("JDBC URL: {}", configuration.database.jdbcUrl)
-        logger.info("Plugins loaded: {}", plugins.map { it.getPluginName() })
-        logger.info("Web interface: http://localhost:{}/", appPort)
-        logger.info("NFC Tags: http://localhost:{}/play/{{tag-id}}", appPort)
-        logger.info("Search API: http://localhost:{}/search/{{plugin}}", appPort)
-        logger.info("Admin interface: http://localhost:{}/", adminPort)
     }
 }

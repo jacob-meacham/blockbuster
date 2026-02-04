@@ -1,8 +1,7 @@
 package com.blockbuster.theater
 
+import com.blockbuster.plugin.roku.RokuPlugin
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.net.http.HttpRequest
 
 /**
  * Handler for Roku device theater setup.
@@ -19,12 +18,8 @@ class RokuTheaterHandler(
     override fun setup() {
         logger.info("Sending Home keypress to Roku at {}", device.ip)
 
-        val request =
-            HttpRequest.newBuilder()
-                .uri(URI.create("http://${device.ip}:${com.blockbuster.plugin.roku.RokuPlugin.ECP_PORT}/keypress/Home"))
-                .POST(HttpRequest.BodyPublishers.ofString(""))
-                .build()
+        val url = "http://${device.ip}:${RokuPlugin.ECP_PORT}/keypress/Home"
 
-        http.sendAndCheck(request, "Roku")
+        http.sendAndCheck(url, null, "Roku")
     }
 }

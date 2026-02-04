@@ -27,10 +27,7 @@ abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
     abstract val defaultTitle: String
     abstract val postLaunchKey: RokuKey
 
-    override fun buildPlaybackCommand(
-        content: RokuMediaContent,
-        rokuDeviceIp: String,
-    ): RokuPlaybackCommand {
+    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand {
         val contentId = content.contentId
         val mediaType = content.mediaType?.lowercase() ?: "movie"
 

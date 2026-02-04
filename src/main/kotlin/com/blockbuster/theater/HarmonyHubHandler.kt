@@ -2,8 +2,6 @@ package com.blockbuster.theater
 
 import com.blockbuster.media.MediaJson
 import org.slf4j.LoggerFactory
-import java.net.URI
-import java.net.http.HttpRequest
 
 /**
  * Handler for Logitech Harmony Hub theater setup.
@@ -20,15 +18,10 @@ class HarmonyHubHandler(
     override fun setup() {
         logger.info("Setting up Harmony Hub at {}, activity {}", device.ip, device.activityId)
 
+        val url = "http://${device.ip}:8088/start"
         val body = MediaJson.mapper.writeValueAsString(mapOf("activityId" to device.activityId))
-        val request =
-            HttpRequest.newBuilder()
-                .uri(URI.create("http://${device.ip}:8088/start"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(body))
-                .build()
 
-        http.sendAndCheck(request, "Harmony Hub")
+        http.sendAndCheck(url, body, "Harmony Hub")
 
         if (device.delayMs > 0) {
             try {

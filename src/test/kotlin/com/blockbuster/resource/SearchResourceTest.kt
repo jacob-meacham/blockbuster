@@ -2,12 +2,12 @@ package com.blockbuster.resource
 
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.media.RokuMediaMetadata
+import com.blockbuster.plugin.ChannelInfoItem
+import com.blockbuster.plugin.ChannelInfoProvider
 import com.blockbuster.plugin.MediaPlugin
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.plugin.SearchOptions
 import com.blockbuster.plugin.SearchResult
-import com.blockbuster.plugin.roku.RokuChannelPlugin
-import com.blockbuster.plugin.roku.RokuPlugin
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -15,13 +15,13 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
 class SearchResourceTest {
-    private lateinit var pluginManager: MediaPluginManager
+    private lateinit var plugins: MutableMap<String, MediaPlugin<*>>
     private lateinit var searchResource: SearchResource
 
     @BeforeEach
     fun setUp() {
-        pluginManager = mock()
-        searchResource = SearchResource(pluginManager)
+        plugins = mutableMapOf()
+        searchResource = SearchResource(PluginRegistry(plugins))
     }
 
     // ---------------------------------------------------------------
@@ -33,15 +33,12 @@ class SearchResourceTest {
         val response = searchResource.searchAll(query = "   ", limit = 20, plugin = null)
 
         assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-        assertEquals("Query parameter 'q' is required", body["error"])
+        val body = response.entity as ErrorResponse
+        assertEquals("Query parameter 'q' is required", body.error)
     }
 
     @Test
     fun `searchAll returns aggregated results from plugins`() {
-        // Given
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -52,51 +49,42 @@ class SearchResourceTest {
                 contentId = "81444554",
                 title = "Inception",
                 mediaType = "movie",
-                metadata =
-                    RokuMediaMetadata(
-                        description = "A mind-bending thriller",
-                        imageUrl = "http://example.com/inception.jpg",
-                    ),
+                metadata = RokuMediaMetadata(description = "A mind-bending thriller", imageUrl = "http://example.com/inception.jpg"),
             )
         val searchResult =
             SearchResult(
                 title = "Inception",
                 url = null,
-                mediaUrl = null,
                 content = content,
+                source = "brave",
+                dedupKey = "12-81444554",
+                description = "A mind-bending thriller",
+                imageUrl = "http://example.com/inception.jpg",
             )
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(listOf(searchResult))
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "inception", limit = 20, plugin = null)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
+        val body = response.entity as SearchAllResponse
+        assertEquals("inception", body.query)
+        assertEquals(1, body.totalResults)
 
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-        assertEquals("inception", body["query"])
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // Results include the search result plus the manual search tile
-        assertTrue(results.size >= 2)
-
-        val firstResult = results[0]
-        assertEquals("Inception", firstResult["title"])
-        assertEquals("Netflix", firstResult["channelName"])
-        assertEquals("12", firstResult["channelId"])
-        assertEquals("81444554", firstResult["contentId"])
-        assertEquals("movie", firstResult["mediaType"])
-        assertEquals("A mind-bending thriller", firstResult["description"])
-        assertEquals("http://example.com/inception.jpg", firstResult["imageUrl"])
+        val first = body.results[0]
+        assertEquals("Inception", first.title)
+        assertEquals("12-81444554", first.dedupKey)
+        assertEquals("A mind-bending thriller", first.description)
+        assertEquals("http://example.com/inception.jpg", first.imageUrl)
+        val resultContent = first.content as RokuMediaContent
+        assertEquals("Netflix", resultContent.channelName)
+        assertEquals("12", resultContent.channelId)
+        assertEquals("81444554", resultContent.contentId)
+        assertEquals("movie", resultContent.mediaType)
     }
 
     @Test
     fun `searchAll with plugin filter only searches specified plugin`() {
-        // Given
         val rokuPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(rokuPlugin.getPluginName()).thenReturn("roku")
 
@@ -112,35 +100,24 @@ class SearchResourceTest {
                 mediaType = "movie",
             )
         whenever(rokuPlugin.search(eq("test"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Test Movie", content = content)),
+            listOf(SearchResult(title = "Test Movie", content = content, dedupKey = "12-12345")),
         )
 
-        whenever(pluginManager.getPlugin("roku")).thenReturn(rokuPlugin)
+        plugins["roku"] = rokuPlugin
+        plugins["spotify"] = otherPlugin
 
-        // When
         val response = searchResource.searchAll(query = "test", limit = 20, plugin = "roku")
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-        verify(pluginManager).getPlugin("roku")
-        verify(pluginManager, never()).getAllPlugins()
         verifyNoInteractions(otherPlugin)
 
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // Should have the one result plus the manual search tile
-        assertEquals(2, results.size)
-        assertEquals("Test Movie", results[0]["title"])
-        assertEquals("Can't find it?", results[1]["title"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(1, body.results.size)
+        assertEquals("Test Movie", body.results[0].title)
     }
 
     @Test
-    fun `searchAll deduplication removes duplicate channelId plus contentId`() {
-        // Given
+    fun `searchAll deduplication removes duplicate dedupKey`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -151,7 +128,6 @@ class SearchResourceTest {
                 contentId = "81444554",
                 title = "Inception (from Brave)",
                 mediaType = "movie",
-                metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554"),
             )
         val content2 =
             RokuMediaContent(
@@ -164,134 +140,48 @@ class SearchResourceTest {
 
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(
             listOf(
-                SearchResult(title = "Inception (from Brave)", url = "https://netflix.com/title/81444554", content = content1),
-                SearchResult(title = "Inception (from channel)", url = null, content = content2),
+                SearchResult(
+                    title = "Inception (from Brave)",
+                    url = "https://netflix.com/title/81444554",
+                    content = content1,
+                    source = "brave",
+                    dedupKey = "12-81444554",
+                ),
+                SearchResult(
+                    title = "Inception (from channel)",
+                    url = null,
+                    content = content2,
+                    source = "Emby",
+                    dedupKey = "12-81444554",
+                ),
             ),
         )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "inception", limit = 20, plugin = null)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // Should deduplicate: 1 unique result + 1 manual search tile = 2
-        assertEquals(2, results.size)
-        assertEquals("Inception (from Brave)", results[0]["title"])
-        assertEquals("Can't find it?", results[1]["title"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(1, body.results.size)
+        assertEquals("Inception (from Brave)", body.results[0].title)
     }
 
     @Test
-    fun `searchAll appends manual search tile for roku searches`() {
-        // Given
-        val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
-        whenever(mockPlugin.getPluginName()).thenReturn("roku")
-
-        val content =
-            RokuMediaContent(
-                channelName = "Netflix",
-                channelId = "12",
-                contentId = "12345",
-                title = "Some Movie",
-                mediaType = "movie",
-            )
-        whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Some Movie", content = content)),
-        )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
-
-        // When
-        val response = searchResource.searchAll(query = "movie", limit = 20, plugin = null)
-
-        // Then
-        assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        val lastResult = results.last()
-        assertEquals("manual", lastResult["source"])
-        assertEquals("Can't find it?", lastResult["title"])
-        assertEquals("Manual Search", lastResult["channelName"])
-        assertEquals("MANUAL", lastResult["channelId"])
-        assertEquals("MANUAL_SEARCH_TILE", lastResult["contentId"])
-        assertEquals("help", lastResult["mediaType"])
-        assertEquals("Search manually on your streaming services", lastResult["description"])
-    }
-
-    @Test
-    fun `searchAll does not append manual search tile when no results`() {
-        // Given
+    fun `searchAll returns empty results when no results found`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
         whenever(mockPlugin.search(eq("nonexistent"), any<SearchOptions>())).thenReturn(emptyList())
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "nonexistent", limit = 20, plugin = null)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // No results means no manual search tile either
-        assertEquals(0, results.size)
-    }
-
-    @Test
-    fun `searchAll does not append manual search tile for non-roku plugin filter`() {
-        // Given
-        val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
-        whenever(mockPlugin.getPluginName()).thenReturn("spotify")
-
-        val content =
-            RokuMediaContent(
-                channelName = "Spotify",
-                channelId = "spotify-1",
-                contentId = "track-123",
-                title = "Some Song",
-                mediaType = "music",
-            )
-        whenever(mockPlugin.search(eq("song"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Some Song", content = content)),
-        )
-        whenever(pluginManager.getPlugin("spotify")).thenReturn(mockPlugin)
-
-        // When
-        val response = searchResource.searchAll(query = "song", limit = 20, plugin = "spotify")
-
-        // Then
-        assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // Only the actual result, no manual search tile
-        assertEquals(1, results.size)
-        assertEquals("Some Song", results[0]["title"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(0, body.results.size)
     }
 
     @Test
     fun `searchAll handles plugin failure gracefully`() {
-        // Given
         val failingPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(failingPlugin.getPluginName()).thenReturn("failing-plugin")
         whenever(failingPlugin.search(any(), any<SearchOptions>())).thenThrow(RuntimeException("Connection refused"))
@@ -308,32 +198,22 @@ class SearchResourceTest {
                 mediaType = "movie",
             )
         whenever(workingPlugin.search(eq("test"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Working Result", content = content)),
+            listOf(SearchResult(title = "Working Result", content = content, dedupKey = "12-99999")),
         )
 
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(failingPlugin, workingPlugin))
+        plugins["failing-plugin"] = failingPlugin
+        plugins["roku"] = workingPlugin
 
-        // When
         val response = searchResource.searchAll(query = "test", limit = 20, plugin = null)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        // The working plugin result should be present, plus manual tile
-        assertEquals(2, results.size)
-        assertEquals("Working Result", results[0]["title"])
-        assertEquals("Can't find it?", results[1]["title"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(1, body.results.size)
+        assertEquals("Working Result", body.results[0].title)
     }
 
     @Test
-    fun `searchAll sets source to brave when result has url`() {
-        // Given
+    fun `searchAll passes source from SearchResult display fields`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -344,29 +224,27 @@ class SearchResourceTest {
                 contentId = "81444554",
                 title = "Inception",
                 mediaType = "movie",
-                metadata = RokuMediaMetadata(searchUrl = "https://netflix.com/title/81444554"),
             )
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Inception", url = "https://netflix.com/title/81444554", content = content)),
+            listOf(
+                SearchResult(
+                    title = "Inception",
+                    url = "https://netflix.com/title/81444554",
+                    content = content,
+                    source = "brave",
+                    dedupKey = "12-81444554",
+                ),
+            ),
         )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "inception", limit = 20, plugin = null)
-
-        // Then
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        assertEquals("brave", results[0]["source"])
+        val body = response.entity as SearchAllResponse
+        assertEquals("brave", body.results[0].source)
     }
 
     @Test
-    fun `searchAll sets source to plugin name when result has no url`() {
-        // Given
+    fun `searchAll passes plugin-provided source when no url`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -379,26 +257,19 @@ class SearchResourceTest {
                 mediaType = "movie",
             )
         whenever(mockPlugin.search(eq("local"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Local Movie", url = null, content = content)),
+            listOf(
+                SearchResult(title = "Local Movie", url = null, content = content, source = "Emby", dedupKey = "44191-541"),
+            ),
         )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "local", limit = 20, plugin = null)
-
-        // Then
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        assertEquals("roku", results[0]["source"])
+        val body = response.entity as SearchAllResponse
+        assertEquals("Emby", body.results[0].source)
     }
 
     @Test
-    fun `searchAll uses overview as fallback description when description is null`() {
-        // Given
+    fun `searchAll uses description from SearchResult display fields`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -409,33 +280,27 @@ class SearchResourceTest {
                 contentId = "541",
                 title = "Movie With Overview",
                 mediaType = "movie",
-                metadata =
-                    RokuMediaMetadata(
-                        description = null,
-                        overview = "This is the overview text",
-                    ),
+                metadata = RokuMediaMetadata(description = null, overview = "This is the overview text"),
             )
         whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Movie With Overview", content = content)),
+            listOf(
+                SearchResult(
+                    title = "Movie With Overview",
+                    content = content,
+                    description = "This is the overview text",
+                    dedupKey = "44191-541",
+                ),
+            ),
         )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "movie", limit = 20, plugin = null)
-
-        // Then
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<Map<String, Any?>>
-
-        assertEquals("This is the overview text", results[0]["description"])
+        val body = response.entity as SearchAllResponse
+        assertEquals("This is the overview text", body.results[0].description)
     }
 
     @Test
     fun `searchAll respects limit parameter`() {
-        // Given
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -451,36 +316,24 @@ class SearchResourceTest {
                             title = "Movie $i",
                             mediaType = "movie",
                         ),
+                    dedupKey = "12-id-$i",
                 )
             }
         whenever(mockPlugin.search(eq("movies"), any<SearchOptions>())).thenReturn(results)
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When - limit to 3
         val response = searchResource.searchAll(query = "movies", limit = 3, plugin = null)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val resultsList = body["results"] as List<Map<String, Any?>>
-
-        // 3 results + 1 manual search tile = 4
-        assertEquals(4, resultsList.size)
-        // First 3 are actual results
-        assertEquals("Movie 1", resultsList[0]["title"])
-        assertEquals("Movie 2", resultsList[1]["title"])
-        assertEquals("Movie 3", resultsList[2]["title"])
-        // Last one is manual search tile
-        assertEquals("Can't find it?", resultsList[3]["title"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(3, body.results.size)
+        assertEquals("Movie 1", body.results[0].title)
+        assertEquals("Movie 2", body.results[1].title)
+        assertEquals("Movie 3", body.results[2].title)
     }
 
     @Test
-    fun `searchAll totalResults reflects actual count including manual tile`() {
-        // Given
+    fun `searchAll totalResults reflects actual count`() {
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -493,19 +346,13 @@ class SearchResourceTest {
                 mediaType = "movie",
             )
         whenever(mockPlugin.search(eq("movie"), any<SearchOptions>())).thenReturn(
-            listOf(SearchResult(title = "Movie", content = content)),
+            listOf(SearchResult(title = "Movie", content = content, dedupKey = "12-123")),
         )
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(mockPlugin))
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.searchAll(query = "movie", limit = 20, plugin = null)
-
-        // Then
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        // 1 result + 1 manual tile = 2
-        assertEquals(2, body["totalResults"])
+        val body = response.entity as SearchAllResponse
+        assertEquals(1, body.totalResults)
     }
 
     // ---------------------------------------------------------------
@@ -517,28 +364,21 @@ class SearchResourceTest {
         val response = searchResource.search(pluginName = "roku", query = "  ", limit = 10)
 
         assertEquals(Response.Status.BAD_REQUEST.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-        assertEquals("Query parameter 'q' is required", body["error"])
+        val body = response.entity as ErrorResponse
+        assertEquals("Query parameter 'q' is required", body.error)
     }
 
     @Test
     fun `search for unknown plugin returns 404`() {
-        whenever(pluginManager.getPlugin("nonexistent")).thenReturn(null)
-
         val response = searchResource.search(pluginName = "nonexistent", query = "test", limit = 10)
 
         assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-        assertEquals("Plugin 'nonexistent' not found", body["error"])
+        val body = response.entity as ErrorResponse
+        assertEquals("Plugin 'nonexistent' not found", body.error)
     }
 
     @Test
     fun `search for known plugin returns results`() {
-        // Given
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.getPluginName()).thenReturn("roku")
 
@@ -552,37 +392,26 @@ class SearchResourceTest {
             )
         val searchResult = SearchResult(title = "Inception", content = content)
         whenever(mockPlugin.search(eq("inception"), any<SearchOptions>())).thenReturn(listOf(searchResult))
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
 
-        // When
         val response = searchResource.search(pluginName = "roku", query = "inception", limit = 10)
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-        assertEquals("roku", body["plugin"])
-        assertEquals("inception", body["query"])
-        assertEquals(1, body["totalResults"])
-
-        @Suppress("UNCHECKED_CAST")
-        val results = body["results"] as List<SearchResult<*>>
-        assertEquals(1, results.size)
-        assertEquals("Inception", results[0].title)
+        val body = response.entity as SearchPluginResponse
+        assertEquals("roku", body.plugin)
+        assertEquals("inception", body.query)
+        assertEquals(1, body.totalResults)
+        assertEquals("Inception", body.results[0].title)
     }
 
     @Test
     fun `search passes correct SearchOptions to plugin`() {
-        // Given
         val mockPlugin = mock<MediaPlugin<RokuMediaContent>>()
         whenever(mockPlugin.search(any(), any<SearchOptions>())).thenReturn(emptyList())
-        whenever(pluginManager.getPlugin("roku")).thenReturn(mockPlugin)
+        plugins["roku"] = mockPlugin
 
-        // When
         searchResource.search(pluginName = "roku", query = "test", limit = 5)
 
-        // Then
         verify(mockPlugin).search(eq("test"), eq(SearchOptions(limit = 5)))
     }
 
@@ -592,7 +421,6 @@ class SearchResourceTest {
 
     @Test
     fun `getAvailablePlugins returns plugin list`() {
-        // Given
         val plugin1 = mock<MediaPlugin<RokuMediaContent>>()
         whenever(plugin1.getPluginName()).thenReturn("roku")
         whenever(plugin1.getDescription()).thenReturn("Controls Roku devices via ECP protocol")
@@ -601,42 +429,23 @@ class SearchResourceTest {
         whenever(plugin2.getPluginName()).thenReturn("spotify")
         whenever(plugin2.getDescription()).thenReturn("Spotify music player")
 
-        whenever(pluginManager.getAllPlugins()).thenReturn(listOf(plugin1, plugin2))
+        plugins["roku"] = plugin1
+        plugins["spotify"] = plugin2
 
-        // When
         val response = searchResource.getAvailablePlugins()
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val plugins = body["plugins"] as List<Map<String, Any?>>
-
-        assertEquals(2, plugins.size)
-        assertEquals("roku", plugins[0]["name"])
-        assertEquals("Controls Roku devices via ECP protocol", plugins[0]["description"])
-        assertEquals("spotify", plugins[1]["name"])
-        assertEquals("Spotify music player", plugins[1]["description"])
+        val body = response.entity as PluginListResponse
+        assertEquals(2, body.plugins.size)
     }
 
     @Test
     fun `getAvailablePlugins returns empty list when no plugins registered`() {
-        whenever(pluginManager.getAllPlugins()).thenReturn(emptyList())
-
         val response = searchResource.getAvailablePlugins()
 
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val plugins = body["plugins"] as List<Map<String, Any?>>
-
-        assertTrue(plugins.isEmpty())
+        val body = response.entity as PluginListResponse
+        assertTrue(body.plugins.isEmpty())
     }
 
     // ---------------------------------------------------------------
@@ -644,81 +453,50 @@ class SearchResourceTest {
     // ---------------------------------------------------------------
 
     @Test
-    fun `getChannelInfo returns channel info from RokuPlugin`() {
-        // Given
-        val channelPlugin1 = mock<RokuChannelPlugin>()
-        whenever(channelPlugin1.getChannelId()).thenReturn("12")
-        whenever(channelPlugin1.getChannelName()).thenReturn("Netflix")
-        whenever(channelPlugin1.getSearchUrl()).thenReturn("https://netflix.com/search")
+    fun `getChannelInfo returns channel info from ChannelInfoProvider`() {
+        // Create a mock that implements both MediaPlugin and ChannelInfoProvider
+        val rokuPlugin = mock<RokuPluginWithChannelInfo>()
+        whenever(rokuPlugin.getChannelInfo()).thenReturn(
+            listOf(
+                ChannelInfoItem(channelId = "12", channelName = "Netflix", searchUrl = "https://netflix.com/search"),
+                ChannelInfoItem(channelId = "44191", channelName = "Emby", searchUrl = ""),
+            ),
+        )
+        plugins["roku"] = rokuPlugin
 
-        val channelPlugin2 = mock<RokuChannelPlugin>()
-        whenever(channelPlugin2.getChannelId()).thenReturn("44191")
-        whenever(channelPlugin2.getChannelName()).thenReturn("Emby")
-        whenever(channelPlugin2.getSearchUrl()).thenReturn("")
-
-        val rokuPlugin = mock<RokuPlugin>()
-        whenever(rokuPlugin.getAllChannelPlugins()).thenReturn(listOf(channelPlugin1, channelPlugin2))
-
-        whenever(pluginManager.getPlugin("roku")).thenReturn(rokuPlugin)
-
-        // When
         val response = searchResource.getChannelInfo()
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val channels = body["channels"] as List<Map<String, Any?>>
-
-        assertEquals(2, channels.size)
-
-        assertEquals("12", channels[0]["channelId"])
-        assertEquals("Netflix", channels[0]["channelName"])
-        assertEquals("https://netflix.com/search", channels[0]["searchUrl"])
-
-        assertEquals("44191", channels[1]["channelId"])
-        assertEquals("Emby", channels[1]["channelName"])
-        assertEquals("", channels[1]["searchUrl"])
+        val body = response.entity as ChannelListResponse
+        assertEquals(2, body.channels.size)
+        assertEquals("12", body.channels[0].channelId)
+        assertEquals("Netflix", body.channels[0].channelName)
+        assertEquals("https://netflix.com/search", body.channels[0].searchUrl)
+        assertEquals("44191", body.channels[1].channelId)
+        assertEquals("Emby", body.channels[1].channelName)
     }
 
     @Test
-    fun `getChannelInfo returns empty list when roku plugin not found`() {
-        whenever(pluginManager.getPlugin("roku")).thenReturn(null)
-
+    fun `getChannelInfo returns empty list when no ChannelInfoProvider plugins`() {
         val response = searchResource.getChannelInfo()
 
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val channels = body["channels"] as List<Map<String, Any?>>
-
-        assertTrue(channels.isEmpty())
+        val body = response.entity as ChannelListResponse
+        assertTrue(body.channels.isEmpty())
     }
 
     @Test
-    fun `getChannelInfo returns empty list when plugin is not RokuPlugin type`() {
-        // Given - a non-Roku plugin registered as "roku"
-        val nonRokuPlugin = mock<MediaPlugin<RokuMediaContent>>()
-        whenever(pluginManager.getPlugin("roku")).thenReturn(nonRokuPlugin)
+    fun `getChannelInfo returns empty list when plugin is not ChannelInfoProvider`() {
+        val nonProviderPlugin = mock<MediaPlugin<RokuMediaContent>>()
+        plugins["roku"] = nonProviderPlugin
 
-        // When
         val response = searchResource.getChannelInfo()
 
-        // Then
         assertEquals(Response.Status.OK.statusCode, response.status)
-
-        @Suppress("UNCHECKED_CAST")
-        val body = response.entity as Map<String, Any?>
-
-        @Suppress("UNCHECKED_CAST")
-        val channels = body["channels"] as List<Map<String, Any?>>
-
-        assertTrue(channels.isEmpty())
+        val body = response.entity as ChannelListResponse
+        assertTrue(body.channels.isEmpty())
     }
+
+    // Helper interface for mocking a MediaPlugin that also implements ChannelInfoProvider
+    private interface RokuPluginWithChannelInfo : MediaPlugin<RokuMediaContent>, ChannelInfoProvider
 }

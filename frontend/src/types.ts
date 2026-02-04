@@ -33,13 +33,10 @@ export type SearchResult = {
   source: string
   plugin: string
   title: string
-  channelName?: string
-  channelId: string
-  contentId: string
-  mediaType?: string
   url?: string
   description?: string
   imageUrl?: string
+  dedupKey?: string
   content: RokuMediaContent
 }
 

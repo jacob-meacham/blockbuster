@@ -7,6 +7,9 @@ echo "Building (frontend + backend)..."
 echo "Running backend tests..."
 ./gradlew test
 
+echo "Verifying test coverage..."
+./gradlew jacocoTestCoverageVerification
+
 echo "Running frontend checks..."
 (cd frontend && npm run lint)
 

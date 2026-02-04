@@ -23,7 +23,6 @@ class EmbyRokuChannelPluginTest {
     private val embyServerUrl = "http://192.168.1.50:8096"
     private val embyApiKey = "test-api-key"
     private val embyUserId = "test-user-id"
-    private val rokuDeviceIp = "192.168.1.100"
 
     @BeforeEach
     fun setUp() {
@@ -65,14 +64,12 @@ class EmbyRokuChannelPluginTest {
                 mediaType = "Movie",
             )
 
-        val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.DeepLink)
         val deepLink = command as RokuPlaybackCommand.DeepLink
-        assertEquals(
-            "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541",
-            deepLink.url,
-        )
+        assertEquals("44191", deepLink.channelId)
+        assertEquals("Command=PlayNow&ItemIds=541", deepLink.params)
     }
 
     @Test
@@ -90,14 +87,13 @@ class EmbyRokuChannelPluginTest {
                     ),
             )
 
-        val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.DeepLink)
         val deepLink = command as RokuPlaybackCommand.DeepLink
-        assertEquals(
-            "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541&StartPositionTicks=36000000000",
-            deepLink.url,
-        )
+        assertEquals("44191", deepLink.channelId)
+        assertTrue(deepLink.params.contains("Command=PlayNow&ItemIds=541"))
+        assertTrue(deepLink.params.contains("StartPositionTicks=36000000000"))
     }
 
     @Test
@@ -115,15 +111,11 @@ class EmbyRokuChannelPluginTest {
                     ),
             )
 
-        val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.DeepLink)
         val deepLink = command as RokuPlaybackCommand.DeepLink
-        assertFalse(deepLink.url.contains("StartPositionTicks"))
-        assertEquals(
-            "http://192.168.1.100:8060/launch/44191?Command=PlayNow&ItemIds=541",
-            deepLink.url,
-        )
+        assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 
     @Test
@@ -141,11 +133,11 @@ class EmbyRokuChannelPluginTest {
                     ),
             )
 
-        val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.DeepLink)
         val deepLink = command as RokuPlaybackCommand.DeepLink
-        assertFalse(deepLink.url.contains("StartPositionTicks"))
+        assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 
     @Test
@@ -160,11 +152,11 @@ class EmbyRokuChannelPluginTest {
                 metadata = null,
             )
 
-        val command = plugin.buildPlaybackCommand(content, rokuDeviceIp)
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.DeepLink)
         val deepLink = command as RokuPlaybackCommand.DeepLink
-        assertFalse(deepLink.url.contains("StartPositionTicks"))
+        assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 
     @Test
@@ -462,5 +454,30 @@ class EmbyRokuChannelPluginTest {
     @Test
     fun `getSearchUrl should return Emby web search URL`() {
         assertEquals("$embyServerUrl/web/index.html#!/search.html", plugin.getSearchUrl())
+    }
+
+    @Test
+    fun `search should URL-encode query parameters`() {
+        val jsonResponse = """{"Items": [], "TotalRecordCount": 0}"""
+        val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())
+        val response =
+            mock<Response> {
+                on { isSuccessful } doReturn true
+                on { body } doReturn responseBody
+            }
+        val call =
+            mock<Call> {
+                on { execute() } doReturn response
+            }
+        whenever(httpClient.newCall(any())).thenReturn(call)
+
+        plugin.search("test&query=value")
+
+        val requestCaptor = argumentCaptor<okhttp3.Request>()
+        verify(httpClient).newCall(requestCaptor.capture())
+        val url = requestCaptor.firstValue.url.toString()
+        // The & and = should be encoded in the searchTerm parameter
+        assertFalse(url.contains("searchTerm=test&query"))
+        assertTrue(url.contains("searchTerm=test%26query%3Dvalue") || url.contains("searchTerm=test%26query%3dvalue"))
     }
 }

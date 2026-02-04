@@ -4,7 +4,7 @@ import com.blockbuster.media.MediaContentParser
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.plugin.MediaPlugin
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.PluginRegistry
 import jakarta.ws.rs.core.Response
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -12,15 +12,15 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 
 class LibraryResourceTest {
-    private lateinit var pluginManager: MediaPluginManager
+    private lateinit var plugins: MutableMap<String, MediaPlugin<*>>
     private lateinit var mediaStore: MediaStore
     private lateinit var libraryResource: LibraryResource
 
     @BeforeEach
     fun setUp() {
-        pluginManager = mock()
+        plugins = mutableMapOf()
         mediaStore = mock()
-        libraryResource = LibraryResource(pluginManager, mediaStore)
+        libraryResource = LibraryResource(PluginRegistry(plugins), mediaStore)
     }
 
     @Test
@@ -47,7 +47,7 @@ class LibraryResourceTest {
                 title = "Test Movie",
             )
 
-        whenever(pluginManager.getPlugin(pluginName)).thenReturn(mockPlugin)
+        plugins[pluginName] = mockPlugin
         whenever(mockPlugin.getContentParser()).thenReturn(mockParser)
         whenever(mockParser.fromJson(any())).thenReturn(rokuContent)
         whenever(mediaStore.put(eq(pluginName), any())).thenReturn(uuid)
@@ -85,7 +85,7 @@ class LibraryResourceTest {
                 contentId = "81444554",
             )
 
-        whenever(pluginManager.getPlugin(pluginName)).thenReturn(mockPlugin)
+        plugins[pluginName] = mockPlugin
         whenever(mockPlugin.getContentParser()).thenReturn(mockParser)
         whenever(mockParser.fromJson(any())).thenReturn(rokuContent)
 
@@ -107,7 +107,7 @@ class LibraryResourceTest {
         val pluginName = "unsupported"
         val request = LibraryResource.AddByPluginRequest(emptyMap())
 
-        whenever(pluginManager.getPlugin(pluginName)).thenReturn(null)
+        // plugins map does not contain "unsupported"
 
         // When/Then - BadRequestException propagates for Dropwizard to map to 400
         assertThrows(jakarta.ws.rs.BadRequestException::class.java) {

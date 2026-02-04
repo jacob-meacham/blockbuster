@@ -4,7 +4,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.*
-import java.net.http.HttpRequest
 
 class TheaterDeviceHandlerTest {
     // --- HarmonyHubHandler tests ---
@@ -20,17 +19,18 @@ class TheaterDeviceHandlerTest {
 
         handler.setup()
 
-        val captor = argumentCaptor<HttpRequest>()
-        verify(http).sendAndCheck(captor.capture(), eq("Harmony Hub"))
-        assertEquals("http://192.168.1.50:8088/start", captor.firstValue.uri().toString())
-        assertEquals("POST", captor.firstValue.method())
+        val urlCaptor = argumentCaptor<String>()
+        val bodyCaptor = argumentCaptor<String>()
+        verify(http).sendAndCheck(urlCaptor.capture(), bodyCaptor.capture(), eq("Harmony Hub"))
+        assertEquals("http://192.168.1.50:8088/start", urlCaptor.firstValue)
+        assertTrue(bodyCaptor.firstValue?.contains("12345678") == true)
     }
 
     @Test
     fun `HarmonyHubHandler throws TheaterSetupException on HTTP error`() {
         val http =
             mock<TheaterHttpClient> {
-                on { sendAndCheck(any(), eq("Harmony Hub")) } doThrow
+                on { sendAndCheck(any(), anyOrNull(), eq("Harmony Hub")) } doThrow
                     TheaterSetupException("Harmony Hub", "HTTP 500: Internal Server Error")
             }
         val handler =
@@ -57,10 +57,11 @@ class TheaterDeviceHandlerTest {
 
         handler.setup()
 
-        val captor = argumentCaptor<HttpRequest>()
-        verify(http).sendAndCheck(captor.capture(), eq("Home Assistant"))
-        assertEquals("http://192.168.1.10:8123/api/services/automation/trigger", captor.firstValue.uri().toString())
-        assertEquals("POST", captor.firstValue.method())
+        val urlCaptor = argumentCaptor<String>()
+        val bodyCaptor = argumentCaptor<String>()
+        verify(http).sendAndCheck(urlCaptor.capture(), bodyCaptor.capture(), eq("Home Assistant"))
+        assertEquals("http://192.168.1.10:8123/api/services/automation/trigger", urlCaptor.firstValue)
+        assertTrue(bodyCaptor.firstValue?.contains("automation.movie_mode") == true)
     }
 
     // --- RokuTheaterHandler tests ---
@@ -76,10 +77,9 @@ class TheaterDeviceHandlerTest {
 
         handler.setup()
 
-        val captor = argumentCaptor<HttpRequest>()
-        verify(http).sendAndCheck(captor.capture(), eq("Roku"))
-        assertEquals("http://192.168.1.100:8060/keypress/Home", captor.firstValue.uri().toString())
-        assertEquals("POST", captor.firstValue.method())
+        val urlCaptor = argumentCaptor<String>()
+        verify(http).sendAndCheck(urlCaptor.capture(), anyOrNull(), eq("Roku"))
+        assertEquals("http://192.168.1.100:8060/keypress/Home", urlCaptor.firstValue)
     }
 
     // --- Factory function tests ---

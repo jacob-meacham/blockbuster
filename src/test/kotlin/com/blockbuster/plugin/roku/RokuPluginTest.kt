@@ -74,10 +74,10 @@ class RokuPluginTest {
                 title = "Test Movie",
             )
 
-        val playbackCommand = RokuPlaybackCommand.DeepLink("http://$testDeviceIp:8060/launch/12?contentId=movie123")
+        val playbackCommand = RokuPlaybackCommand.DeepLink(channelId = "12", params = "contentId=movie123")
 
         whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
-        whenever(mockChannelPlugin.buildPlaybackCommand(content, testDeviceIp)).thenReturn(playbackCommand)
+        whenever(mockChannelPlugin.buildPlaybackCommand(content)).thenReturn(playbackCommand)
 
         // When
         assertDoesNotThrow {
@@ -86,7 +86,7 @@ class RokuPluginTest {
 
         // Then
         verify(mockMediaStore).getParsed("uuid123", "roku", RokuMediaContent.Parser)
-        verify(mockChannelPlugin).buildPlaybackCommand(content, testDeviceIp)
+        verify(mockChannelPlugin).buildPlaybackCommand(content)
         verify(mockHttpClient).newCall(any())
     }
 
@@ -120,7 +120,7 @@ class RokuPluginTest {
             )
 
         whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
-        whenever(mockChannelPlugin.buildPlaybackCommand(content, testDeviceIp)).thenReturn(playbackCommand)
+        whenever(mockChannelPlugin.buildPlaybackCommand(content)).thenReturn(playbackCommand)
 
         // When
         assertDoesNotThrow {
@@ -128,7 +128,7 @@ class RokuPluginTest {
         }
 
         // Then
-        verify(mockChannelPlugin).buildPlaybackCommand(content, testDeviceIp)
+        verify(mockChannelPlugin).buildPlaybackCommand(content)
         // Should make 2 HTTP calls: Launch and SELECT press
         verify(mockHttpClient, times(2)).newCall(any())
     }

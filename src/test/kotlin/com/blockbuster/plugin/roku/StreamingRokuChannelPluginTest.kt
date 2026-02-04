@@ -37,7 +37,7 @@ abstract class StreamingRokuChannelPluginTest {
                 title = "Test Movie",
             )
 
-        val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
+        val command = plugin.buildPlaybackCommand(content)
 
         assertTrue(command is RokuPlaybackCommand.ActionSequence)
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
@@ -65,7 +65,7 @@ abstract class StreamingRokuChannelPluginTest {
                 title = "Test Episode",
             )
 
-        val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
+        val command = plugin.buildPlaybackCommand(content)
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
         val launchAction = actionSequence.actions[0] as RokuAction.Launch
         assertTrue(launchAction.params.contains("mediaType=episode"))
@@ -81,7 +81,7 @@ abstract class StreamingRokuChannelPluginTest {
                 title = "Test Content",
             )
 
-        val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
+        val command = plugin.buildPlaybackCommand(content)
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
         val launchAction = actionSequence.actions[0] as RokuAction.Launch
         assertTrue(launchAction.params.contains("mediaType=movie"))
@@ -97,7 +97,7 @@ abstract class StreamingRokuChannelPluginTest {
                 title = "Test Series",
             )
 
-        val command = plugin.buildPlaybackCommand(content, "192.168.1.100")
+        val command = plugin.buildPlaybackCommand(content)
         val actionSequence = command as RokuPlaybackCommand.ActionSequence
         val launchAction = actionSequence.actions[0] as RokuAction.Launch
         assertTrue(launchAction.params.contains("mediaType=series"))

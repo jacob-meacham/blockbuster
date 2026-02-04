@@ -1,8 +1,8 @@
 package com.blockbuster.resource
 
-import com.blockbuster.media.RokuMediaContent
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.ChannelInfoProvider
 import com.blockbuster.plugin.PluginException
+import com.blockbuster.plugin.PluginRegistry
 import com.blockbuster.plugin.SearchOptions
 import jakarta.ws.rs.DefaultValue
 import jakarta.ws.rs.GET
@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory
 @Path("/search")
 @Produces(MediaType.APPLICATION_JSON)
 class SearchResource(
-    private val pluginManager: MediaPluginManager,
+    private val plugins: PluginRegistry,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -53,7 +53,7 @@ class SearchResource(
         return try {
             if (query.isBlank()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(mapOf("error" to "Query parameter 'q' is required"))
+                    .entity(ErrorResponse("Query parameter 'q' is required"))
                     .build()
             }
 
@@ -61,101 +61,54 @@ class SearchResource(
 
             val pluginsToSearch =
                 if (plugin != null) {
-                    listOfNotNull(pluginManager.getPlugin(plugin))
+                    listOfNotNull(plugins[plugin])
                 } else {
-                    pluginManager.getAllPlugins()
+                    plugins.values.toList()
                 }
 
-            val allResults = collectSearchResults(pluginsToSearch, query, limit)
+            val allResults = mutableListOf<SearchResultItem>()
+
+            pluginsToSearch.forEach { searchPlugin ->
+                try {
+                    val pluginResults = searchPlugin.search(query, SearchOptions(limit = limit))
+                    pluginResults.forEach { result ->
+                        allResults.add(
+                            SearchResultItem(
+                                source = result.source,
+                                plugin = searchPlugin.getPluginName(),
+                                title = result.title,
+                                url = result.url,
+                                description = result.description,
+                                imageUrl = result.imageUrl,
+                                dedupKey = result.dedupKey,
+                                content = result.content,
+                            ),
+                        )
+                    }
+                    logger.info("Plugin '{}' returned {} results", searchPlugin.getPluginName(), pluginResults.size)
+                } catch (e: Exception) {
+                    logger.warn("Plugin '{}' search failed: {}", searchPlugin.getPluginName(), e.message)
+                }
+            }
 
             val dedupResults =
                 allResults
-                    .distinctBy { "${it["channelId"]}-${it["contentId"]}" }
+                    .distinctBy { it.dedupKey ?: it }
                     .take(limit)
 
-            val results = appendManualSearchTile(dedupResults, plugin)
-
             Response.ok(
-                mapOf(
-                    "query" to query,
-                    "totalResults" to results.size,
-                    "results" to results,
+                SearchAllResponse(
+                    query = query,
+                    totalResults = dedupResults.size,
+                    results = dedupResults,
                 ),
             ).build()
         } catch (e: Exception) {
             logger.error("Aggregated search failed: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(mapOf("error" to "Internal server error"))
+                .entity(ErrorResponse("Internal server error"))
                 .build()
         }
-    }
-
-    private fun collectSearchResults(
-        plugins: List<com.blockbuster.plugin.MediaPlugin<*>>,
-        query: String,
-        limit: Int,
-    ): List<Map<String, Any?>> {
-        val results = mutableListOf<Map<String, Any?>>()
-
-        plugins.forEach { searchPlugin ->
-            try {
-                val pluginResults = searchPlugin.search(query, SearchOptions(limit = limit))
-                pluginResults.forEach { result ->
-                    val content = result.content
-                    if (content is RokuMediaContent) {
-                        results.add(buildResultMap(content, result, searchPlugin.getPluginName()))
-                    }
-                }
-                logger.info("Plugin '{}' returned {} results", searchPlugin.getPluginName(), pluginResults.size)
-            } catch (e: Exception) {
-                logger.warn("Plugin '{}' search failed: {}", searchPlugin.getPluginName(), e.message)
-            }
-        }
-
-        return results
-    }
-
-    private fun buildResultMap(
-        content: RokuMediaContent,
-        result: com.blockbuster.plugin.SearchResult<*>,
-        pluginName: String,
-    ): Map<String, Any?> {
-        val description = content.metadata?.description ?: content.metadata?.overview ?: ""
-        val source = if (result.url != null && result.url.toString().isNotBlank()) "brave" else pluginName
-
-        return mapOf(
-            "source" to source,
-            "plugin" to pluginName,
-            "title" to result.title,
-            "channelName" to content.channelName,
-            "channelId" to content.channelId,
-            "contentId" to content.contentId,
-            "mediaType" to content.mediaType,
-            "url" to result.url,
-            "description" to description,
-            "imageUrl" to (content.metadata?.imageUrl ?: ""),
-            "content" to content,
-        )
-    }
-
-    private fun appendManualSearchTile(
-        results: List<Map<String, Any?>>,
-        pluginFilter: String?,
-    ): List<Map<String, Any?>> {
-        val isRokuSearch = pluginFilter == null || pluginFilter == "roku"
-        if (results.isEmpty() || !isRokuSearch) return results
-
-        return results +
-            mapOf(
-                "source" to "manual",
-                "title" to "Can't find it?",
-                "channelName" to "Manual Search",
-                "channelId" to "MANUAL",
-                "contentId" to "MANUAL_SEARCH_TILE",
-                "mediaType" to "help",
-                "description" to "Search manually on your streaming services",
-                "content" to mapOf("type" to "manual_search_instructions"),
-            )
     }
 
     @GET
@@ -168,38 +121,37 @@ class SearchResource(
         return try {
             if (query.isBlank()) {
                 return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(mapOf("error" to "Query parameter 'q' is required"))
+                    .entity(ErrorResponse("Query parameter 'q' is required"))
                     .build()
             }
 
             val plugin =
-                pluginManager.getPlugin(pluginName)
+                plugins[pluginName]
                     ?: return Response.status(Response.Status.NOT_FOUND)
-                        .entity(mapOf("error" to "Plugin '$pluginName' not found"))
+                        .entity(ErrorResponse("Plugin '$pluginName' not found"))
                         .build()
 
             logger.info("Searching plugin '{}' for query '{}'", pluginName, query)
 
             val results = plugin.search(query, SearchOptions(limit = limit))
 
-            val response =
-                mapOf(
-                    "plugin" to pluginName,
-                    "query" to query,
-                    "totalResults" to results.size,
-                    "results" to results,
-                )
-
-            Response.ok(response).build()
+            Response.ok(
+                SearchPluginResponse(
+                    plugin = pluginName,
+                    query = query,
+                    totalResults = results.size,
+                    results = results,
+                ),
+            ).build()
         } catch (e: PluginException) {
             logger.error("Plugin search failed: {}", e.message, e)
             Response.status(Response.Status.BAD_REQUEST)
-                .entity(mapOf("error" to e.message))
+                .entity(ErrorResponse(e.message))
                 .build()
         } catch (e: Exception) {
             logger.error("Search request failed: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(mapOf("error" to "Internal server error"))
+                .entity(ErrorResponse("Internal server error"))
                 .build()
         }
     }
@@ -208,19 +160,19 @@ class SearchResource(
     @Path("/plugins")
     fun getAvailablePlugins(): Response {
         return try {
-            val plugins =
-                pluginManager.getAllPlugins().map { plugin ->
-                    mapOf(
-                        "name" to plugin.getPluginName(),
-                        "description" to plugin.getDescription(),
+            val pluginList =
+                plugins.values.map { plugin ->
+                    PluginInfo(
+                        name = plugin.getPluginName(),
+                        description = plugin.getDescription(),
                     )
                 }
 
-            Response.ok(mapOf("plugins" to plugins)).build()
+            Response.ok(PluginListResponse(plugins = pluginList)).build()
         } catch (e: Exception) {
             logger.error("Failed to get plugin list: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(mapOf("error" to "Internal server error"))
+                .entity(ErrorResponse("Internal server error"))
                 .build()
         }
     }
@@ -229,25 +181,16 @@ class SearchResource(
     @Path("/channels")
     fun getChannelInfo(): Response {
         return try {
-            val rokuPlugin = pluginManager.getPlugin("roku")
-            val channelInfo =
-                if (rokuPlugin is com.blockbuster.plugin.roku.RokuPlugin) {
-                    rokuPlugin.getAllChannelPlugins().map { channel ->
-                        mapOf(
-                            "channelId" to channel.getChannelId(),
-                            "channelName" to channel.getChannelName(),
-                            "searchUrl" to channel.getSearchUrl(),
-                        )
-                    }
-                } else {
-                    emptyList()
-                }
+            val channels =
+                plugins.values
+                    .filterIsInstance<ChannelInfoProvider>()
+                    .flatMap { it.getChannelInfo() }
 
-            Response.ok(mapOf("channels" to channelInfo)).build()
+            Response.ok(ChannelListResponse(channels = channels)).build()
         } catch (e: Exception) {
             logger.error("Failed to get channel info: {}", e.message, e)
             Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                .entity(mapOf("error" to "Internal server error"))
+                .entity(ErrorResponse("Internal server error"))
                 .build()
         }
     }

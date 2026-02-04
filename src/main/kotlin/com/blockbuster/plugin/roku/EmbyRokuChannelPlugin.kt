@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.net.URLEncoder
 
 /**
  * Roku channel plugin for Emby
@@ -40,39 +41,33 @@ class EmbyRokuChannelPlugin(
 
     override fun getSearchUrl(): String = "$embyServerUrl/web/index.html#!/search.html"
 
-    override fun buildPlaybackCommand(
-        content: RokuMediaContent,
-        rokuDeviceIp: String,
-    ): RokuPlaybackCommand {
-        // Parse content metadata to get Emby-specific fields
+    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand {
         val itemId = content.contentId
         val resumePosition = content.metadata?.resumePositionTicks
 
-        // Build validated deep link URL
         val params =
             mutableListOf(
                 "Command=PlayNow",
                 "ItemIds=$itemId",
             )
 
-        // Include resume position if available
         if (resumePosition != null && resumePosition > 0) {
             params.add("StartPositionTicks=$resumePosition")
         }
 
-        val url = "http://$rokuDeviceIp:8060/launch/${getChannelId()}?${params.joinToString("&")}"
-
-        logger.debug("Built Emby deep link: {}", url)
-
-        return RokuPlaybackCommand.DeepLink(url)
+        return RokuPlaybackCommand.DeepLink(
+            channelId = getChannelId(),
+            params = params.joinToString("&"),
+        )
     }
 
     override fun search(query: String): List<RokuMediaContent> {
         logger.debug("Searching Emby library for: {}", query)
 
+        val encodedQuery = URLEncoder.encode(query, "UTF-8")
         val searchUrl =
             "$embyServerUrl/Users/$embyUserId/Items?" +
-                "searchTerm=$query" +
+                "searchTerm=$encodedQuery" +
                 "&recursive=true" +
                 "&limit=$SEARCH_LIMIT" +
                 "&fields=Overview,Path,ImageTags,Genres,CommunityRating,OfficialRating,UserData" +

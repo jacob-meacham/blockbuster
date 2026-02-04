@@ -3,7 +3,7 @@ package com.blockbuster.resource
 import com.blockbuster.media.MediaItem
 import com.blockbuster.media.MediaJson
 import com.blockbuster.media.MediaStore
-import com.blockbuster.plugin.MediaPluginManager
+import com.blockbuster.plugin.PluginRegistry
 import jakarta.ws.rs.BadRequestException
 import jakarta.ws.rs.Consumes
 import jakarta.ws.rs.DELETE
@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 class LibraryResource(
-    private val pluginManager: MediaPluginManager,
+    private val plugins: PluginRegistry,
     private val mediaStore: MediaStore,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
@@ -67,7 +67,7 @@ class LibraryResource(
     ): Response {
         return try {
             val plugin =
-                pluginManager.getPlugin(pluginName.lowercase())
+                plugins[pluginName.lowercase()]
                     ?: throw BadRequestException("Unsupported plugin: $pluginName")
 
             val parser = plugin.getContentParser()
@@ -148,7 +148,7 @@ class LibraryResource(
             jsonMap["title"] = request.title
 
             val plugin =
-                pluginManager.getPlugin(item.plugin)
+                plugins[item.plugin]
                     ?: return Response.status(Response.Status.BAD_REQUEST)
                         .entity(mapOf("error" to "Unknown plugin: ${item.plugin}"))
                         .build()
