@@ -12,19 +12,14 @@ import javax.sql.DataSource
  * @property dataSource the JDBC DataSource to check
  */
 class DatabaseHealthCheck(private val dataSource: DataSource) : HealthCheck() {
-
     override fun check(): Result {
         return try {
             dataSource.connection.use { connection ->
-                connection.prepareStatement("SELECT 1").use { statement ->
-                    statement.executeQuery().use { resultSet ->
-                        if (resultSet.next()) {
-                            Result.healthy()
-                        } else {
-                            Result.unhealthy("SELECT 1 returned no rows")
-                        }
+                val isHealthy =
+                    connection.prepareStatement("SELECT 1").use { statement ->
+                        statement.executeQuery().use { it.next() }
                     }
-                }
+                if (isHealthy) Result.healthy() else Result.unhealthy("SELECT 1 returned no rows")
             }
         } catch (e: Exception) {
             Result.unhealthy(e)

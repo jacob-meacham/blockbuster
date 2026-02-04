@@ -1,21 +1,18 @@
 package com.blockbuster.health
 
-import java.sql.Connection
-import java.sql.PreparedStatement
-import java.sql.ResultSet
-import java.sql.SQLException
-
-import javax.sql.DataSource
-
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.sql.Connection
+import java.sql.PreparedStatement
+import java.sql.ResultSet
+import java.sql.SQLException
+import javax.sql.DataSource
 
 class DatabaseHealthCheckTest {
-
     private lateinit var dataSource: DataSource
     private lateinit var connection: Connection
     private lateinit var statement: PreparedStatement

@@ -2,7 +2,6 @@ package com.blockbuster.health
 
 import com.blockbuster.plugin.MediaPlugin
 import com.blockbuster.plugin.MediaPluginManager
-
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -10,7 +9,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class MediaPluginHealthCheckTest {
-
     @Test
     fun `check returns healthy when plugins are loaded`() {
         // Given

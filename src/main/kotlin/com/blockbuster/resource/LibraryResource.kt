@@ -101,6 +101,7 @@ class LibraryResource(
                 .build()
         }
     }
+
     @DELETE
     @Path("/{uuid}")
     fun delete(
@@ -129,25 +130,28 @@ class LibraryResource(
         request: RenameRequest,
     ): Response {
         return try {
-            val item = mediaStore.get(uuid)
-                ?: return Response.status(Response.Status.NOT_FOUND)
-                    .entity(mapOf("error" to "Item not found"))
-                    .build()
+            val item =
+                mediaStore.get(uuid)
+                    ?: return Response.status(Response.Status.NOT_FOUND)
+                        .entity(mapOf("error" to "Item not found"))
+                        .build()
 
-            val jsonMap: MutableMap<String, Any?> = MediaJson.mapper.readValue(
-                item.configJson,
-                MediaJson.mapper.typeFactory.constructMapType(
-                    MutableMap::class.java,
-                    String::class.java,
-                    Any::class.java,
-                ),
-            )
+            val jsonMap: MutableMap<String, Any?> =
+                MediaJson.mapper.readValue(
+                    item.configJson,
+                    MediaJson.mapper.typeFactory.constructMapType(
+                        MutableMap::class.java,
+                        String::class.java,
+                        Any::class.java,
+                    ),
+                )
             jsonMap["title"] = request.title
 
-            val plugin = pluginManager.getPlugin(item.plugin)
-                ?: return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(mapOf("error" to "Unknown plugin: ${item.plugin}"))
-                    .build()
+            val plugin =
+                pluginManager.getPlugin(item.plugin)
+                    ?: return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(mapOf("error" to "Unknown plugin: ${item.plugin}"))
+                        .build()
 
             val parser = plugin.getContentParser()
             val updatedJson = MediaJson.mapper.writeValueAsString(jsonMap)

@@ -13,7 +13,6 @@ import com.codahale.metrics.health.HealthCheck
  * @property pluginManager the plugin manager to check
  */
 class MediaPluginHealthCheck(private val pluginManager: MediaPluginManager) : HealthCheck() {
-
     override fun check(): Result {
         val plugins = pluginManager.getAllPlugins()
         if (plugins.isEmpty()) {

@@ -1,16 +1,16 @@
 package com.blockbuster
 
 import com.blockbuster.db.FlywayManager
+import com.blockbuster.health.DatabaseHealthCheck
+import com.blockbuster.health.MediaPluginHealthCheck
 import com.blockbuster.media.SqliteMediaStore
 import com.blockbuster.plugin.MediaPluginManager
 import com.blockbuster.plugin.PluginFactory
-import com.blockbuster.health.DatabaseHealthCheck
-import com.blockbuster.health.MediaPluginHealthCheck
+import com.blockbuster.resource.FrontendResource
 import com.blockbuster.resource.HealthResource
 import com.blockbuster.resource.LibraryResource
 import com.blockbuster.resource.PlayResource
 import com.blockbuster.resource.SearchResource
-import com.blockbuster.resource.FrontendResource
 import com.blockbuster.theater.DefaultTheaterHttpClient
 import com.blockbuster.theater.TheaterDeviceManager
 import com.blockbuster.theater.createTheaterHandler
