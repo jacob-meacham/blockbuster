@@ -42,6 +42,12 @@ jobs:
           name: coverage-report
           path: build/reports/jacoco/test/
 
+      - name: Upload coverage to Coveralls
+        if: success()
+        uses: coverallsapp/github-action@v2
+        with:
+          file: build/reports/jacoco/test/jacocoTestReport.xml
+
       - name: Upload detekt report
         if: always()
         uses: actions/upload-artifact@v4

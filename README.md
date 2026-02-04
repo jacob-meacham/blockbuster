@@ -1,5 +1,7 @@
 # Blockbuster
 
+[![Coverage Status](https://coveralls.io/repos/github/jacob-meacham/blockbuster/badge.svg?branch=main)](https://coveralls.io/github/jacob-meacham/blockbuster?branch=main)
+
 NFC-powered media library. Tap a cartridge, play a movie.
 
 ## Quick Start
