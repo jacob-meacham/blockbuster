@@ -63,6 +63,7 @@ export function useLibrary() {
       id: uuid,
       uuid,
       plugin: result.plugin,
+      title: result.content.title ?? null,
       playUrl: url,
       configJson: JSON.stringify(result.content),
       updatedAt: new Date().toISOString(),
