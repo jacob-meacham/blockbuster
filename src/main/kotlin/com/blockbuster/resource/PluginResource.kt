@@ -10,7 +10,7 @@ import jakarta.ws.rs.core.MediaType
 import jakarta.ws.rs.core.Response
 import org.slf4j.LoggerFactory
 
-@Path("/{pluginName}")
+@Path("/plugins/{pluginName}")
 @Produces(MediaType.APPLICATION_JSON)
 class PluginResource(
     private val plugins: PluginRegistry,

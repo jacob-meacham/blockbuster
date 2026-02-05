@@ -14,8 +14,7 @@ export default defineConfig(({ mode }) => {
         '/search/all': `http://localhost:${backendPort}`,
         '/search/plugins': `http://localhost:${backendPort}`,
         '/search/roku': `http://localhost:${backendPort}`,
-        '/roku/channels': `http://localhost:${backendPort}`,
-        '/spotify/channels': `http://localhost:${backendPort}`,
+        '/plugins': `http://localhost:${backendPort}`,
         '/library': {
           target: `http://localhost:${backendPort}`,
           bypass(req) {

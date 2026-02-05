@@ -103,7 +103,7 @@ export async function fetchPlugins(): Promise<PluginInfo[]> {
 }
 
 export async function fetchChannels(pluginName: string): Promise<ChannelInfo[]> {
-  const resp = await fetch(`/${encodeURIComponent(pluginName)}/channels`)
+  const resp = await fetch(`/plugins/${encodeURIComponent(pluginName)}/channels`)
   const data = await resp.json()
   return data.channels || []
 }

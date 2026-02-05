@@ -5,7 +5,7 @@ services:
       - "8585:8584"
     volumes:
       - ./config.yml:/config/config.yml:ro
-      - blockbuster-data:/app/data
+      - ./data:/app/data
 
 volumes:
   blockbuster-data:
