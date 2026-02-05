@@ -16,7 +16,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class SpotifyMediaContent(
     val contentId: String,
-    val title: String,
+    override val title: String,
     val spotifyUri: String,
     val mediaType: String = "album",
     val artist: String? = null,

@@ -47,7 +47,7 @@ data class RokuMediaContent(
     val channelName: String? = null,
     val channelId: String,
     val contentId: String,
-    val title: String? = null,
+    override val title: String? = null,
     val mediaType: String? = null,
     val metadata: RokuMediaMetadata? = null,
     val createdAt: Instant = Instant.now(),

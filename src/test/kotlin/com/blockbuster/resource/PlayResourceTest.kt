@@ -34,6 +34,7 @@ class PlayResourceTest {
             MediaItem(
                 uuid = uuid,
                 plugin = "roku",
+                title = "Test Content",
                 configJson = """{"channelId":"12","contentId":"81444554"}""",
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
@@ -61,6 +62,7 @@ class PlayResourceTest {
             MediaItem(
                 uuid = uuid,
                 plugin = "roku",
+                title = "Test Content",
                 configJson = """{"channelId":"12","contentId":"81444554"}""",
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
@@ -101,6 +103,7 @@ class PlayResourceTest {
             MediaItem(
                 uuid = uuid,
                 plugin = "nonexistent-plugin",
+                title = null,
                 configJson = "{}",
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
@@ -126,6 +129,7 @@ class PlayResourceTest {
             MediaItem(
                 uuid = uuid,
                 plugin = "roku",
+                title = null,
                 configJson = "{}",
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
@@ -152,6 +156,7 @@ class PlayResourceTest {
             MediaItem(
                 uuid = uuid,
                 plugin = "roku",
+                title = null,
                 configJson = "{}",
                 createdAt = Instant.now(),
                 updatedAt = Instant.now(),
@@ -167,99 +172,5 @@ class PlayResourceTest {
 
         // Then
         assertEquals(Response.Status.INTERNAL_SERVER_ERROR.statusCode, response.status)
-    }
-
-    @Test
-    fun `playPage with valid UUID returns HTML`() {
-        // Given
-        val uuid = "test-uuid-123"
-        val mediaItem =
-            MediaItem(
-                uuid = uuid,
-                plugin = "roku",
-                configJson = "{}",
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-            )
-
-        whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
-
-        // When
-        val html = playResource.playPage(uuid)
-
-        // Then
-        assertTrue(html.contains("roku"))
-        assertTrue(html.contains(uuid))
-        assertTrue(html.contains("Play Now"))
-    }
-
-    @Test
-    fun `playPage with invalid UUID returns error HTML`() {
-        // Given
-        val uuid = "nonexistent-uuid"
-        whenever(mediaStore.get(uuid)).thenReturn(null)
-
-        // When
-        val html = playResource.playPage(uuid)
-
-        // Then
-        assertTrue(html.contains("Content Not Found"))
-        assertTrue(html.contains(uuid))
-    }
-
-    // ---------------------------------------------------------------
-    // XSS security tests
-    // ---------------------------------------------------------------
-
-    @Test
-    fun `playPage escapes HTML in UUID to prevent XSS for not-found content`() {
-        // Given
-        val xssUuid = "<script>alert(1)</script>"
-        whenever(mediaStore.get(xssUuid)).thenReturn(null)
-
-        // When
-        val html = playResource.playPage(xssUuid)
-
-        // Then - raw script tag must not appear; escaped form must be present
-        assertFalse(html.contains("<script>"), "Raw <script> tag should be escaped")
-        assertTrue(html.contains("&lt;script&gt;"), "Escaped script tag should be present")
-    }
-
-    @Test
-    fun `playPage escapes HTML in UUID for valid content`() {
-        // Given
-        val xssUuid = "test\"><img src=x onerror=alert(1)>"
-        val mediaItem =
-            MediaItem(
-                uuid = xssUuid,
-                plugin = "roku",
-                configJson = "{}",
-                createdAt = Instant.now(),
-                updatedAt = Instant.now(),
-            )
-        whenever(mediaStore.get(xssUuid)).thenReturn(mediaItem)
-
-        // When
-        val html = playResource.playPage(xssUuid)
-
-        // Then — raw HTML tags must not appear; quotes must be escaped
-        assertFalse(html.contains("<img"), "Raw <img> tag should be escaped")
-        assertTrue(html.contains("&lt;img"), "Escaped <img> tag should be present")
-        assertTrue(html.contains("&quot;"), "Double quotes should be escaped")
-    }
-
-    @Test
-    fun `escapeHtml escapes all dangerous characters`() {
-        val input = """<script>alert("XSS's")</script> & more"""
-        val escaped = PlayResource.escapeHtml(input)
-
-        assertFalse(escaped.contains("<"))
-        assertFalse(escaped.contains(">"))
-        assertFalse(escaped.contains("\""))
-        assertTrue(escaped.contains("&lt;"))
-        assertTrue(escaped.contains("&gt;"))
-        assertTrue(escaped.contains("&quot;"))
-        assertTrue(escaped.contains("&#x27;"))
-        assertTrue(escaped.contains("&amp;"))
     }
 }

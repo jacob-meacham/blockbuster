@@ -274,13 +274,32 @@ class SqliteMediaStoreTest {
     }
 
     @Test
-    fun `rename should update title and return true when item exists`() {
+    fun `put should populate title column from content`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1", title = "My Movie")
+        val uuid = mediaStore.put("roku", content)
+        val item = mediaStore.get(uuid)!!
+        assertEquals("My Movie", item.title)
+    }
+
+    @Test
+    fun `put should store null title when content has no title`() {
+        val content = RokuMediaContent(channelId = "12", contentId = "1")
+        val uuid = mediaStore.put("roku", content)
+        val item = mediaStore.get(uuid)!!
+        assertNull(item.title)
+    }
+
+    @Test
+    fun `rename should update title column and return true when item exists`() {
         val content = RokuMediaContent(channelId = "12", contentId = "1", title = "Old Title")
         val uuid = mediaStore.put("roku", content)
         val renamed = mediaStore.rename(uuid, "New Title")
         assertTrue(renamed)
+        val item = mediaStore.get(uuid)!!
+        assertEquals("New Title", item.title)
+        // config_json is unchanged — column is the source of truth
         val parsed = mediaStore.getParsed(uuid, "roku", RokuMediaContent)
-        assertEquals("New Title", parsed!!.title)
+        assertEquals("Old Title", parsed!!.title)
         assertEquals("12", parsed.channelId)
     }
 

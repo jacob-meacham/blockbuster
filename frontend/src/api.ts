@@ -17,7 +17,7 @@ export async function fetchLibrary(): Promise<LibraryItem[]> {
   const resp = await fetch('/library?page=1&pageSize=1000')
   const data = await resp.json()
   return (data.items || []).map(
-    (it: { uuid: string; plugin: string; playUrl: string; configJson: string; updatedAt: string }) => {
+    (it: { uuid: string; plugin: string; title: string | null; playUrl: string; configJson: string; updatedAt: string }) => {
       let parsedContent = null
       try {
         parsedContent = JSON.parse(it.configJson)
@@ -31,6 +31,33 @@ export async function fetchLibrary(): Promise<LibraryItem[]> {
       }
     }
   )
+}
+
+export async function getLibraryItem(uuid: string): Promise<LibraryItem | null> {
+  const resp = await fetch(`/library/${encodeURIComponent(uuid)}`)
+  if (resp.status === 404) return null
+  if (!resp.ok) throw new Error('Failed to fetch library item')
+  const it = await resp.json()
+  let parsedContent = null
+  try {
+    parsedContent = JSON.parse(it.configJson)
+  } catch {
+    // ignore parse errors
+  }
+  return {
+    id: it.uuid,
+    ...it,
+    parsedContent
+  }
+}
+
+export async function triggerPlay(uuid: string): Promise<{ status: string; uuid: string; plugin: string }> {
+  const resp = await fetch(`/play/${encodeURIComponent(uuid)}`, { method: 'POST' })
+  if (!resp.ok) {
+    const data = await resp.json()
+    throw new Error(data.error || 'Playback failed')
+  }
+  return resp.json()
 }
 
 export async function addToLibrary(

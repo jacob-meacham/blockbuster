@@ -24,7 +24,14 @@ export default defineConfig(({ mode }) => {
             }
           }
         },
-        '/play': `http://localhost:${backendPort}`,
+        '/play': {
+          target: `http://localhost:${backendPort}`,
+          bypass(req) {
+            if (req.headers.accept?.includes('text/html')) {
+              return '/index.html'
+            }
+          }
+        },
         '/health': `http://localhost:${backendPort}`,
         '/auth': `http://localhost:${backendPort}`,
       }

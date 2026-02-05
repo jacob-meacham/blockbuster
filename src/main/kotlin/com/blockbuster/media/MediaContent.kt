@@ -6,6 +6,8 @@ import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 
 interface MediaContent {
+    val title: String?
+
     fun toJson(): String
 }
 

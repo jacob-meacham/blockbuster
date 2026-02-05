@@ -66,7 +66,7 @@ function getItemValue(item: LibraryItem, key: SortKey): string {
   switch (key) {
     case 'plugin': return item.plugin || ''
     case 'source': return getSourceName(item.plugin, item.parsedContent)
-    case 'title': return item.parsedContent?.title || ''
+    case 'title': return item.title || item.parsedContent?.title || ''
     case 'contentId': return item.parsedContent?.contentId || ''
   }
 }
@@ -117,7 +117,7 @@ export function LibraryView() {
     if (filter) {
       const lower = filter.toLowerCase()
       items = items.filter((item) => {
-        const title = item.parsedContent?.title?.toLowerCase() || ''
+        const title = (item.title || item.parsedContent?.title || '').toLowerCase()
         const source = getSourceName(item.plugin, item.parsedContent).toLowerCase()
         const contentId = item.parsedContent?.contentId?.toLowerCase() || ''
         return title.includes(lower) || source.includes(lower) || contentId.includes(lower)
@@ -160,7 +160,7 @@ export function LibraryView() {
 
   function openRename(item: LibraryItem) {
     setRenameItem(item)
-    setRenameValue(item.parsedContent?.title || '')
+    setRenameValue(item.title || item.parsedContent?.title || '')
   }
 
   async function handleRename() {
@@ -377,7 +377,7 @@ export function LibraryView() {
                         />
                       </TableCell>
                       <TableCell sx={{ color: '#fff' }}>
-                        {item.parsedContent?.title || 'Untitled'}
+                        {item.title || item.parsedContent?.title || 'Untitled'}
                       </TableCell>
                       <TableCell>
                         <Typography

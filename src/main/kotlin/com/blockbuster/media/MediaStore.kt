@@ -54,7 +54,7 @@ interface MediaStore {
     fun remove(uuid: String): Boolean
 
     /**
-     * Rename a library item by updating the "title" field in its stored JSON.
+     * Rename a library item by updating its title column.
      *
      * @param uuid the item's UUID
      * @param newTitle the new title (must not be blank)
@@ -84,6 +84,7 @@ interface MediaStore {
 data class MediaItem(
     val uuid: String,
     val plugin: String,
+    val title: String?,
     val configJson: String,
     val createdAt: Instant,
     val updatedAt: Instant,

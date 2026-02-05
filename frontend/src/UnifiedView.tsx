@@ -360,7 +360,7 @@ export function UnifiedView() {
             {library.libraryItems.map((item, idx) => (
               <MediaCard
                 key={item.uuid}
-                title={item.parsedContent?.title || item.parsedContent?.contentId || 'Untitled'}
+                title={item.title || item.parsedContent?.title || item.parsedContent?.contentId || 'Untitled'}
                 subtitle={getSourceName(item.plugin, item.parsedContent)}
                 description={'metadata' in (item.parsedContent || {}) ? ((item.parsedContent as any)?.metadata?.description || (item.parsedContent as any)?.metadata?.overview) : undefined}
                 mediaType={item.parsedContent?.mediaType}

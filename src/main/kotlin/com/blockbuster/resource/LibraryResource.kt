@@ -59,6 +59,20 @@ class LibraryResource(
         ).build()
     }
 
+    @GET
+    @Path("/{uuid}")
+    fun getItem(
+        @PathParam("uuid") uuid: String,
+    ): Response {
+        val item =
+            mediaStore.get(uuid)
+                ?: return Response.status(Response.Status.NOT_FOUND)
+                    .entity(mapOf("error" to "Item not found"))
+                    .build()
+
+        return Response.ok(item.toResponseMap()).build()
+    }
+
     @POST
     @Path("/{pluginName}")
     fun addByPlugin(
@@ -151,6 +165,7 @@ private fun MediaItem.toResponseMap(): Map<String, Any?> =
     mapOf(
         "plugin" to plugin,
         "uuid" to uuid,
+        "title" to title,
         "configJson" to configJson,
         "updatedAt" to updatedAt.toString(),
         "playUrl" to "/play/$uuid",

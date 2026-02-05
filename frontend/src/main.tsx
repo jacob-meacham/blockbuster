@@ -4,6 +4,7 @@ import { CssBaseline, createTheme, ThemeProvider } from '@mui/material'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { UnifiedView } from './UnifiedView'
 import { LibraryView } from './LibraryView'
+import { PlayView } from './PlayView'
 
 const darkTheme = createTheme({
   palette: {
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/search" element={<UnifiedView />} />
             <Route path="/library" element={<LibraryView />} />
+            <Route path="/play/:uuid" element={<PlayView />} />
             <Route path="/" element={<UnifiedView />} />
           </Routes>
         </BrowserRouter>

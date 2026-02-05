@@ -1,6 +1,7 @@
 package com.blockbuster.resource
 
 import com.blockbuster.media.MediaContentParser
+import com.blockbuster.media.MediaItem
 import com.blockbuster.media.MediaStore
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.plugin.MediaPlugin
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
+import java.time.Instant
 
 class LibraryResourceTest {
     private lateinit var plugins: MutableMap<String, MediaPlugin<*>>
@@ -157,6 +159,40 @@ class LibraryResourceTest {
     fun `rename returns 404 when item does not exist`() {
         whenever(mediaStore.rename("no-such-uuid", "New Title")).thenReturn(false)
         val response = libraryResource.rename("no-such-uuid", LibraryResource.RenameRequest("New Title"))
+        assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
+    }
+
+    @Test
+    fun `getItem returns item when it exists`() {
+        val uuid = "test-uuid-123"
+        val mediaItem =
+            MediaItem(
+                uuid = uuid,
+                plugin = "roku",
+                title = "Test Movie",
+                configJson = """{"channelId":"12","contentId":"81444554","title":"Test Movie"}""",
+                createdAt = Instant.now(),
+                updatedAt = Instant.now(),
+            )
+        whenever(mediaStore.get(uuid)).thenReturn(mediaItem)
+
+        val response = libraryResource.getItem(uuid)
+
+        assertEquals(Response.Status.OK.statusCode, response.status)
+        @Suppress("UNCHECKED_CAST")
+        val responseMap = response.entity as Map<String, Any?>
+        assertEquals(uuid, responseMap["uuid"])
+        assertEquals("roku", responseMap["plugin"])
+        assertEquals("Test Movie", responseMap["title"])
+        assertEquals("/play/$uuid", responseMap["playUrl"])
+    }
+
+    @Test
+    fun `getItem returns 404 when item does not exist`() {
+        whenever(mediaStore.get("no-such-uuid")).thenReturn(null)
+
+        val response = libraryResource.getItem("no-such-uuid")
+
         assertEquals(Response.Status.NOT_FOUND.statusCode, response.status)
     }
 }

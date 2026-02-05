@@ -19,13 +19,14 @@ class SqliteMediaStore(
             dataSource.connection.use { connection ->
                 val insert =
                     """
-                    INSERT INTO media_library (uuid, plugin, config_json)
-                    VALUES (?, ?, ?)
+                    INSERT INTO media_library (uuid, plugin, title, config_json)
+                    VALUES (?, ?, ?, ?)
                     """.trimIndent()
                 connection.prepareStatement(insert).use { ps ->
                     ps.setString(1, uuid)
                     ps.setString(2, plugin)
-                    ps.setString(3, configJson)
+                    ps.setString(3, content.title)
+                    ps.setString(4, configJson)
                     ps.executeUpdate()
                 }
             }
@@ -47,13 +48,14 @@ class SqliteMediaStore(
                 val update =
                     """
                     UPDATE media_library
-                    SET plugin = ?, config_json = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
+                    SET plugin = ?, title = ?, config_json = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
                     WHERE uuid = ?
                     """.trimIndent()
                 connection.prepareStatement(update).use { ps ->
                     ps.setString(1, plugin)
-                    ps.setString(2, configJson)
-                    ps.setString(3, uuid)
+                    ps.setString(2, content.title)
+                    ps.setString(3, configJson)
+                    ps.setString(4, uuid)
                     val rowsUpdated = ps.executeUpdate()
                     require(rowsUpdated > 0) { "No media item found with uuid=$uuid" }
                 }
@@ -65,7 +67,7 @@ class SqliteMediaStore(
     }
 
     override fun get(uuid: String): MediaItem? {
-        val sql = "SELECT uuid, plugin, config_json, created_at, updated_at FROM media_library WHERE uuid = ?"
+        val sql = "SELECT uuid, plugin, title, config_json, created_at, updated_at FROM media_library WHERE uuid = ?"
         return try {
             dataSource.connection.use { connection ->
                 connection.prepareStatement(sql).use { ps ->
@@ -75,6 +77,7 @@ class SqliteMediaStore(
                         MediaItem(
                             uuid = rs.getString("uuid"),
                             plugin = rs.getString("plugin"),
+                            title = rs.getString("title"),
                             configJson = rs.getString("config_json"),
                             createdAt = rs.getTimestamp("created_at").toInstant(),
                             updatedAt = rs.getTimestamp("updated_at").toInstant(),
@@ -142,30 +145,17 @@ class SqliteMediaStore(
     ): Boolean {
         require(newTitle.isNotBlank()) { "Title must not be blank" }
 
-        val item = get(uuid) ?: return false
-
-        val jsonMap: MutableMap<String, Any?> =
-            MediaJson.mapper.readValue(
-                item.configJson,
-                MediaJson.mapper.typeFactory.constructMapType(
-                    MutableMap::class.java,
-                    String::class.java,
-                    Any::class.java,
-                ),
-            )
-        jsonMap["title"] = newTitle
-        val updatedJson = MediaJson.mapper.writeValueAsString(jsonMap)
+        val sql =
+            """
+            UPDATE media_library
+            SET title = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
+            WHERE uuid = ?
+            """.trimIndent()
 
         try {
             dataSource.connection.use { connection ->
-                val sql =
-                    """
-                    UPDATE media_library
-                    SET config_json = ?, updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now')
-                    WHERE uuid = ?
-                    """.trimIndent()
                 connection.prepareStatement(sql).use { ps ->
-                    ps.setString(1, updatedJson)
+                    ps.setString(1, newTitle)
                     ps.setString(2, uuid)
                     val rowsUpdated = ps.executeUpdate()
                     return rowsUpdated > 0
@@ -189,7 +179,7 @@ class SqliteMediaStore(
 
         val sql =
             """
-            SELECT uuid, plugin, config_json, created_at, updated_at
+            SELECT uuid, plugin, title, config_json, created_at, updated_at
             FROM media_library
             $where
             ORDER BY updated_at DESC
@@ -211,6 +201,7 @@ class SqliteMediaStore(
                             MediaItem(
                                 uuid = rs.getString("uuid"),
                                 plugin = rs.getString("plugin"),
+                                title = rs.getString("title"),
                                 configJson = rs.getString("config_json"),
                                 createdAt = rs.getTimestamp("created_at").toInstant(),
                                 updatedAt = rs.getTimestamp("updated_at").toInstant(),

@@ -69,6 +69,7 @@ export type LibraryItem = {
   id: string
   uuid: string
   plugin: string
+  title: string | null
   playUrl: string
   configJson: string
   updatedAt: string
