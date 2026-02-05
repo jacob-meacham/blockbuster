@@ -43,6 +43,7 @@ class BraveStreamingSearchProvider(
         }
 
         val siteQuery = buildSiteQuery(query)
+        logger.info(siteQuery)
         val response = executeSearch(siteQuery, maxResults)
         return extractContent(response)
     }
@@ -117,14 +118,12 @@ class BraveStreamingSearchProvider(
         response.web?.results?.forEach { result ->
             val url = result.url ?: return@forEach
 
-            // Amazon results must have "| Prime Video" in the title to be streaming content
-            if ("amazon.com" in url && result.title?.contains("| Prime Video") != true) {
-                logger.debug("Skipping non-Prime-Video Amazon result: {}", url)
-                return@forEach
-            }
-
             // Try each plugin until one successfully extracts content
-            val content = channelPlugins.firstNotNullOfOrNull { plugin -> plugin.extractFromUrl(url) }
+            // Plugins receive search result context (title, description) for filtering decisions
+            val content =
+                channelPlugins.firstNotNullOfOrNull { plugin ->
+                    plugin.extractFromUrl(url, result.title, result.description)
+                }
 
             if (content != null) {
                 // Enrich with title, description, image, and original URL from search result

@@ -32,6 +32,12 @@ class UrlExtractionParameterizedTest {
                     "movie",
                 ),
                 Arguments.of(disney, "https://disneyplus.com/video/abc-123-def", "abc-123-def", "movie"),
+                Arguments.of(
+                    disney,
+                    "https://www.disneyplus.com/browse/entity-998ad7ff-51b8-47ec-b571-85152ba5d2ce",
+                    "998ad7ff-51b8-47ec-b571-85152ba5d2ce",
+                    "movie",
+                ),
                 // HBO Max
                 Arguments.of(
                     hbo,
@@ -41,6 +47,18 @@ class UrlExtractionParameterizedTest {
                 ),
                 Arguments.of(hbo, "https://max.com/play/some-show-id", "some-show-id", "movie"),
                 Arguments.of(hbo, "https://www.hbomax.com/video/watch/legacy-id", "legacy-id", "movie"),
+                Arguments.of(
+                    hbo,
+                    "https://www.hbomax.com/movies/howls-moving-castle/7a7a03ca-dd3a-4e62-9e43-e845f338f85e",
+                    "7a7a03ca-dd3a-4e62-9e43-e845f338f85e",
+                    "movie",
+                ),
+                Arguments.of(
+                    hbo,
+                    "https://www.hbomax.com/series/the-wire/12345678-1234-1234-1234-123456789012",
+                    "12345678-1234-1234-1234-123456789012",
+                    "movie",
+                ),
                 // Prime Video
                 Arguments.of(prime, "https://www.amazon.com/gp/video/detail/B0DKTFF815", "B0DKTFF815", "movie"),
                 Arguments.of(prime, "https://amazon.com/gp/video/detail/B0FQM41JFJ/ref=xyz", "B0FQM41JFJ", "movie"),

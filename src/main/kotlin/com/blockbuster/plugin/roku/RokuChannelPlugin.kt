@@ -30,12 +30,6 @@ interface RokuChannelPlugin {
     fun getPublicSearchDomain(): String
 
     /**
-     * Returns the search URL for this channel (e.g., "https://netflix.com/search").
-     * Used for manual search instructions when API search isn't available.
-     */
-    fun getSearchUrl(): String
-
-    /**
      * Builds the playback command for this channel.
      * Returns either a deep link or an action sequence.
      * Channel plugins do not know about device addressing — RokuPlugin resolves the IP.
@@ -55,12 +49,22 @@ interface RokuChannelPlugin {
     /**
      * Extracts RokuMediaContent from a channel-specific URL.
      *
+     * Plugins can use the optional [title] and [description] from search results
+     * to make filtering decisions (e.g., Prime Video only extracts amazon.com
+     * URLs that contain "| Prime Video" in the title).
+     *
      * Default implementation returns null (e.g., Emby doesn't need URL extraction).
      *
      * @param url The URL to extract content from
+     * @param title Optional title from search result for filtering
+     * @param description Optional description from search result for filtering
      * @return RokuMediaContent if extraction successful, null otherwise
      */
-    fun extractFromUrl(url: String): RokuMediaContent? = null
+    fun extractFromUrl(
+        url: String,
+        title: String? = null,
+        description: String? = null,
+    ): RokuMediaContent? = null
 }
 
 /**

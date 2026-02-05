@@ -45,7 +45,11 @@ abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
 
     override fun search(query: String): List<RokuMediaContent> = emptyList()
 
-    override fun extractFromUrl(url: String): RokuMediaContent? {
+    override fun extractFromUrl(
+        url: String,
+        title: String?,
+        description: String?,
+    ): RokuMediaContent? {
         val match = urlPattern.find(url) ?: return null
         return buildContentFromMatch(match, url)
     }

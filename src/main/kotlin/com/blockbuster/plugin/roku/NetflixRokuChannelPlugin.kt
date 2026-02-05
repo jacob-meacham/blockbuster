@@ -22,8 +22,6 @@ class NetflixRokuChannelPlugin : StreamingRokuChannelPlugin() {
 
     override fun getPublicSearchDomain(): String = "netflix.com"
 
-    override fun getSearchUrl(): String = "https://www.netflix.com/search"
-
     override val urlPattern = Regex("""netflix\.com/(?:watch|title)/(\d+)""")
     override val defaultTitle = "Netflix Content"
     override val postLaunchKey = RokuKey.PLAY

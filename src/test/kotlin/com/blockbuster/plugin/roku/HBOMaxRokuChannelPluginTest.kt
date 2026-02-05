@@ -51,4 +51,25 @@ class HBOMaxRokuChannelPluginTest : StreamingRokuChannelPluginTest() {
         assertNull(plugin.extractFromUrl("https://netflix.com/watch/12345"))
         assertNull(plugin.extractFromUrl("https://disneyplus.com/play/abc-123"))
     }
+
+    @Test
+    fun `extractFromUrl should extract content from hbomax com movies URL`() {
+        val url = "https://www.hbomax.com/movies/howls-moving-castle/7a7a03ca-dd3a-4e62-9e43-e845f338f85e"
+        val content = plugin.extractFromUrl(url)
+
+        assertNotNull(content)
+        assertEquals("HBO Max", content?.channelName)
+        assertEquals("61322", content?.channelId)
+        assertEquals("7a7a03ca-dd3a-4e62-9e43-e845f338f85e", content?.contentId)
+        assertEquals("movie", content?.mediaType)
+    }
+
+    @Test
+    fun `extractFromUrl should extract content from hbomax com series URL`() {
+        val url = "https://www.hbomax.com/series/the-wire/12345678-1234-1234-1234-123456789012"
+        val content = plugin.extractFromUrl(url)
+
+        assertNotNull(content)
+        assertEquals("12345678-1234-1234-1234-123456789012", content?.contentId)
+    }
 }

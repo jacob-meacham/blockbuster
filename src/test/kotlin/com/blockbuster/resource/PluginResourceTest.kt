@@ -26,8 +26,8 @@ class PluginResourceTest {
         val rokuPlugin = mock<RokuPluginWithChannelInfo>()
         whenever(rokuPlugin.getChannelInfo()).thenReturn(
             listOf(
-                ChannelInfoItem(channelId = "12", channelName = "Netflix", searchUrl = "https://netflix.com/search"),
-                ChannelInfoItem(channelId = "44191", channelName = "Emby", searchUrl = ""),
+                ChannelInfoItem(channelId = "12", channelName = "Netflix"),
+                ChannelInfoItem(channelId = "44191", channelName = "Emby"),
             ),
         )
         plugins["roku"] = rokuPlugin
@@ -39,7 +39,6 @@ class PluginResourceTest {
         assertEquals(2, body.channels.size)
         assertEquals("12", body.channels[0].channelId)
         assertEquals("Netflix", body.channels[0].channelName)
-        assertEquals("https://netflix.com/search", body.channels[0].searchUrl)
         assertEquals("44191", body.channels[1].channelId)
         assertEquals("Emby", body.channels[1].channelName)
     }

@@ -452,11 +452,6 @@ class EmbyRokuChannelPluginTest {
     }
 
     @Test
-    fun `getSearchUrl should return Emby web search URL`() {
-        assertEquals("$embyServerUrl/web/index.html#!/search.html", plugin.getSearchUrl())
-    }
-
-    @Test
     fun `search should URL-encode query parameters`() {
         val jsonResponse = """{"Items": [], "TotalRecordCount": 0}"""
         val responseBody = jsonResponse.toResponseBody("application/json".toMediaType())

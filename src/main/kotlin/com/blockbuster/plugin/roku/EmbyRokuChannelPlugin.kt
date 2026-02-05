@@ -39,8 +39,6 @@ class EmbyRokuChannelPlugin(
 
     override fun getPublicSearchDomain(): String = "" // Private server, not for public web search
 
-    override fun getSearchUrl(): String = "$embyServerUrl/web/index.html#!/search.html"
-
     override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand {
         val itemId = content.contentId
         val resumePosition = content.metadata?.resumePositionTicks

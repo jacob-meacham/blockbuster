@@ -76,7 +76,6 @@ interface ChannelInfoProvider {
 data class ChannelInfoItem(
     val channelId: String,
     val channelName: String,
-    val searchUrl: String,
 )
 
 /**

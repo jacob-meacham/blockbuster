@@ -1,6 +1,7 @@
 package com.blockbuster.search
 
 import com.blockbuster.media.RokuMediaContent
+import com.blockbuster.plugin.roku.PrimeVideoRokuChannelPlugin
 import com.blockbuster.plugin.roku.RokuChannelPlugin
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -117,7 +118,7 @@ class BraveStreamingSearchProviderTest {
             mock {
                 on { getPublicSearchDomain() } doReturn "netflix.com"
                 on { getChannelName() } doReturn "Netflix"
-                on { extractFromUrl("https://www.netflix.com/title/20557937") } doReturn extractedContent
+                on { extractFromUrl(any(), anyOrNull(), anyOrNull()) } doReturn extractedContent
             }
 
         val provider = createProviderWithMockServer(listOf(channelPlugin))
@@ -156,26 +157,12 @@ class BraveStreamingSearchProviderTest {
 
         mockServer.enqueue(MockResponse().setResponseCode(200).setBody(searchResponse))
 
-        val primeContent =
-            RokuMediaContent(
-                channelId = "13",
-                channelName = "Prime Video",
-                contentId = "B00BI3RKPE",
-                title = "The Matrix",
-            )
-
-        val channelPlugin: RokuChannelPlugin =
-            mock {
-                on { getPublicSearchDomain() } doReturn "amazon.com"
-                on { getChannelName() } doReturn "Prime Video"
-                on { extractFromUrl("https://www.amazon.com/gp/video/detail/B00BI3RKPE") } doReturn primeContent
-            }
-
-        val provider = createProviderWithMockServer(listOf(channelPlugin))
+        // Use real plugin - filtering logic is now in PrimeVideoRokuChannelPlugin
+        val provider = createProviderWithMockServer(listOf(PrimeVideoRokuChannelPlugin()))
 
         val results = provider.searchStreaming("the matrix")
 
-        // Only the Prime Video result should be included
+        // Only the Prime Video result should be included (plugin filters by title)
         assertEquals(1, results.size)
         assertEquals("B00BI3RKPE", results[0].contentId)
     }
@@ -203,7 +190,7 @@ class BraveStreamingSearchProviderTest {
             mock {
                 on { getPublicSearchDomain() } doReturn "netflix.com"
                 on { getChannelName() } doReturn "Netflix"
-                on { extractFromUrl(any()) } doReturn null
+                on { extractFromUrl(any(), anyOrNull(), anyOrNull()) } doReturn null
             }
 
         val provider = createProviderWithMockServer(listOf(channelPlugin))
@@ -249,7 +236,7 @@ class BraveStreamingSearchProviderTest {
             mock {
                 on { getPublicSearchDomain() } doReturn "netflix.com"
                 on { getChannelName() } doReturn "Netflix"
-                on { extractFromUrl(any()) } doReturn content
+                on { extractFromUrl(any(), anyOrNull(), anyOrNull()) } doReturn content
             }
 
         val provider = createProviderWithMockServer(listOf(channelPlugin))

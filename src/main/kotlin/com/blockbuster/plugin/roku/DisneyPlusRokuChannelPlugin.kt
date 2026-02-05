@@ -9,6 +9,11 @@ package com.blockbuster.plugin.roku
  * - contentId: UUID from Disney+ URLs (e.g., f63db666-b097-4c61-99c1-b778de2d4ae1)
  * - mediaType: "movie", "episode", "series", "season"
  *
+ * Supported URL formats:
+ * - /play/{uuid} (e.g., /play/f63db666-b097-4c61-99c1-b778de2d4ae1)
+ * - /video/{uuid}
+ * - /browse/entity-{uuid} (e.g., /browse/entity-998ad7ff-51b8-47ec-b571-85152ba5d2ce)
+ *
  * Workflow:
  * 1. Deep link launches Disney+ to content
  * 2. Profile selection screen appears
@@ -22,9 +27,7 @@ class DisneyPlusRokuChannelPlugin : StreamingRokuChannelPlugin() {
 
     override fun getPublicSearchDomain(): String = "disneyplus.com"
 
-    override fun getSearchUrl(): String = "https://www.disneyplus.com/search"
-
-    override val urlPattern = Regex("""disneyplus\.com/(?:play|video)/([a-f0-9-]+)""")
+    override val urlPattern = Regex("""disneyplus\.com/(?:(?:play|video)/|browse/entity-)([a-f0-9-]+)""")
     override val defaultTitle = "Disney+ Content"
     override val postLaunchKey = RokuKey.SELECT
 }

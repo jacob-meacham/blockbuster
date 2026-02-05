@@ -85,7 +85,6 @@ class RokuPlugin(
             ChannelInfoItem(
                 channelId = channel.getChannelId(),
                 channelName = channel.getChannelName(),
-                searchUrl = channel.getSearchUrl(),
             )
         }
 

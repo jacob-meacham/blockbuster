@@ -6,10 +6,14 @@ package com.blockbuster.plugin.roku
  * Uses standard Roku ECP deep linking with hybrid ActionSequence (profile selection required).
  *
  * Format: http://<roku-ip>:8060/launch/61322?contentId=<id>&mediaType=<type>
- * - contentId: UUID from HBO Max video URLs (first ID from /video/watch/{id1}/{id2})
+ * - contentId: UUID from HBO Max URLs
  * - mediaType: "movie" or "episode"
  *
- * Important: Use first ID from /video/watch/{id1}/{id2} URLs, NOT from /movie/{id} URLs
+ * Supported URL formats:
+ * - /movies/{slug}/{uuid} (e.g., /movies/howls-moving-castle/7a7a03ca-dd3a-4e62-9e43-e845f338f85e)
+ * - /series/{slug}/{uuid}
+ * - /video/watch/{uuid}
+ * - /play/{uuid}
  *
  * Workflow:
  * 1. Deep link launches HBO Max to content
@@ -22,11 +26,13 @@ class HBOMaxRokuChannelPlugin : StreamingRokuChannelPlugin() {
 
     override fun getChannelName(): String = "HBO Max"
 
-    override fun getPublicSearchDomain(): String = "max.com"
+    override fun getPublicSearchDomain(): String = "hbomax.com"
 
-    override fun getSearchUrl(): String = "https://www.max.com/search"
-
-    override val urlPattern = Regex("""(?:max\.com|hbomax\.com)/(?:video/watch|play)/([^/?]+)""")
+    override val urlPattern =
+        Regex(
+            """(?:max\.com|hbomax\.com)/""" +
+                """(?:(?:movies|series)/[^/]+/|(?:video/watch|play)/)([^/?]+)""",
+        )
     override val defaultTitle = "HBO Max Content"
     override val postLaunchKey = RokuKey.SELECT
 }
