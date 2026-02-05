@@ -124,13 +124,10 @@ tasks.jar {
     }
 }
 
-tasks.processResources {
-    dependsOn("copyFrontendDist")
-}
-
 tasks.shadowJar {
     archiveClassifier.set("")
     mergeServiceFiles()
+    dependsOn("copyFrontendDist")
 }
 
 tasks.register<Exec>("buildFrontend") {
