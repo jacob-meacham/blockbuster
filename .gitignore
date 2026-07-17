@@ -71,3 +71,6 @@ frontend/dist/
 !gradle/wrapper/gradle-wrapper.properties
 
 data/
+
+# speclib
+.speclib/

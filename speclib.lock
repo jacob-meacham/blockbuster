@@ -1,0 +1,13 @@
+[[package]]
+name = 'roku-deeplink'
+source = '/code/jacob/roku-deeplink-spec'
+version = '1.1.0'
+commit = '9e7c52ad501c8c159657863d734d5903f72a6bca'
+spec_hash = 'sha256:6a7f117622536c1ea4ebc0df2d6e1ff28e279bd9276dde287653204be212b14d'
+language = 'kotlin'
+path = 'src/main/kotlin/com/blockbuster/plugin/roku/ecp'
+generated_commit = '9e7c52ad501c8c159657863d734d5903f72a6bca'
+generated_at = '2026-07-17T19:59:49Z'
+generator = 'claude-code'
+fixture_status = 'pass'
+test_command = "./gradlew test --tests '*RokuEcpFixtureTest' --console=plain"

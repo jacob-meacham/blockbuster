@@ -26,8 +26,4 @@ class DisneyPlusRokuChannelPlugin : StreamingRokuChannelPlugin() {
     override fun getChannelName(): String = "Disney+"
 
     override fun getPublicSearchDomain(): String = "disneyplus.com"
-
-    override val urlPattern = Regex("""disneyplus\.com/(?:(?:play|video)/|browse/entity-)([a-f0-9-]+)""")
-    override val defaultTitle = "Disney+ Content"
-    override val postLaunchKey = RokuKey.SELECT
 }

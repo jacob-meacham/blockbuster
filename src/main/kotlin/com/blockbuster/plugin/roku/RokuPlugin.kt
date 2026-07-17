@@ -116,16 +116,6 @@ class RokuPlugin(
 
     private suspend fun executePlaybackCommand(command: RokuPlaybackCommand) {
         when (command) {
-            is RokuPlaybackCommand.DeepLink -> {
-                val url =
-                    ecpBaseUrl.newBuilder()
-                        .addPathSegment("launch")
-                        .addPathSegment(command.channelId)
-                        .encodedQuery(command.params)
-                        .build()
-                logger.debug("Executing deep link: {}", url)
-                sendEcpRequest(url.toString(), "POST")
-            }
             is RokuPlaybackCommand.ActionSequence -> {
                 logger.debug("Executing action sequence with {} steps", command.actions.size)
                 executeActionSequence(command.actions)

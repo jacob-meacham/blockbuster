@@ -27,10 +27,6 @@ class PrimeVideoRokuChannelPlugin : StreamingRokuChannelPlugin() {
 
     override fun getPublicSearchDomain(): String = "amazon.com"
 
-    override val urlPattern = Regex("""(?:amazon\.com|primevideo\.com)/.*?/([B][A-Z0-9]{9})""")
-    override val defaultTitle = "Prime Video Content"
-    override val postLaunchKey = RokuKey.SELECT
-
     /**
      * Only extracts content if the URL matches AND (when title is provided) indicates Prime Video.
      *

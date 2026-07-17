@@ -1,0 +1,7 @@
+[project]
+[dependencies]
+[dependencies.roku-deeplink]
+source = '/code/jacob/roku-deeplink-spec'
+version = '*'
+path = 'src/main/kotlin/com/blockbuster/plugin/roku/ecp'
+language = 'kotlin'

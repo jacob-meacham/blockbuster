@@ -2,6 +2,7 @@ package com.blockbuster.plugin.roku
 
 import com.blockbuster.media.RokuMediaContent
 import com.blockbuster.media.RokuMediaMetadata
+import com.blockbuster.plugin.roku.ecp.RokuEcp
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -39,25 +40,10 @@ class EmbyRokuChannelPlugin(
 
     override fun getPublicSearchDomain(): String = "" // Private server, not for public web search
 
-    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand {
-        val itemId = content.contentId
-        val resumePosition = content.metadata?.resumePositionTicks
-
-        val params =
-            mutableListOf(
-                "Command=PlayNow",
-                "ItemIds=$itemId",
-            )
-
-        if (resumePosition != null && resumePosition > 0) {
-            params.add("StartPositionTicks=$resumePosition")
-        }
-
-        return RokuPlaybackCommand.DeepLink(
-            channelId = getChannelId(),
-            params = params.joinToString("&"),
-        )
-    }
+    // Playback (launch-only: Command=PlayNow&ItemIds=..., optional StartPositionTicks)
+    // is handled by the generated RokuEcp core. Emby's own concern is library search.
+    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand =
+        RokuEcp.buildPlaybackCommand(content)
 
     override fun search(query: String): List<RokuMediaContent> {
         logger.debug("Searching Emby library for: {}", query)

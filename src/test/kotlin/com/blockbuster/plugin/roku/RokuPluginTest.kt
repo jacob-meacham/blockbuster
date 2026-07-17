@@ -74,7 +74,10 @@ class RokuPluginTest {
                 title = "Test Movie",
             )
 
-        val playbackCommand = RokuPlaybackCommand.DeepLink(channelId = "12", params = "contentId=movie123")
+        val playbackCommand =
+            RokuPlaybackCommand.ActionSequence(
+                listOf(RokuAction.Launch(channelId = "12", params = "contentId=movie123")),
+            )
 
         whenever(mockMediaStore.getParsed("uuid123", "roku", RokuMediaContent.Parser)).thenReturn(content)
         whenever(mockChannelPlugin.buildPlaybackCommand(content)).thenReturn(playbackCommand)

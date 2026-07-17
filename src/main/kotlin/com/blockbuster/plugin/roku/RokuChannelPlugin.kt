@@ -68,18 +68,16 @@ interface RokuChannelPlugin {
 }
 
 /**
- * Represents a command to play content on Roku
+ * Represents a command to play content on Roku: an ordered list of ECP actions.
+ *
+ * Every channel produces an [ActionSequence] — a `launch` followed by any
+ * post-launch actions (a wait + keypress for the streaming apps, none for
+ * launch-only channels like Emby whose launch params start playback directly).
  */
 sealed class RokuPlaybackCommand {
     /**
-     * Deep link that can be sent to Roku ECP.
-     * RokuPlugin resolves channelId + params into a full URL using the device IP.
-     */
-    data class DeepLink(val channelId: String, val params: String) : RokuPlaybackCommand()
-
-    /**
-     * Action sequence to navigate the channel UI
-     * Used when deep linking isn't supported
+     * Action sequence to execute against the Roku device (launch, then optional
+     * waits/keypresses).
      */
     data class ActionSequence(val actions: List<RokuAction>) : RokuPlaybackCommand()
 }

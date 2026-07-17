@@ -53,8 +53,17 @@ class EmbyRokuChannelPluginTest {
         assertEquals("", plugin.getPublicSearchDomain())
     }
 
+    private fun launchOf(command: RokuPlaybackCommand): RokuAction.Launch {
+        assertTrue(command is RokuPlaybackCommand.ActionSequence, "expected an ActionSequence")
+        val actions = (command as RokuPlaybackCommand.ActionSequence).actions
+        assertEquals(1, actions.size, "Emby command should be launch-only")
+        val action = actions[0]
+        assertTrue(action is RokuAction.Launch, "expected a Launch action")
+        return action as RokuAction.Launch
+    }
+
     @Test
-    fun `buildPlaybackCommand should return DeepLink with correct format`() {
+    fun `buildPlaybackCommand should return a launch-only action sequence`() {
         val content =
             RokuMediaContent(
                 channelName = "Emby",
@@ -66,8 +75,7 @@ class EmbyRokuChannelPluginTest {
 
         val command = plugin.buildPlaybackCommand(content)
 
-        assertTrue(command is RokuPlaybackCommand.DeepLink)
-        val deepLink = command as RokuPlaybackCommand.DeepLink
+        val deepLink = launchOf(command)
         assertEquals("44191", deepLink.channelId)
         assertEquals("Command=PlayNow&ItemIds=541", deepLink.params)
     }
@@ -89,8 +97,7 @@ class EmbyRokuChannelPluginTest {
 
         val command = plugin.buildPlaybackCommand(content)
 
-        assertTrue(command is RokuPlaybackCommand.DeepLink)
-        val deepLink = command as RokuPlaybackCommand.DeepLink
+        val deepLink = launchOf(command)
         assertEquals("44191", deepLink.channelId)
         assertTrue(deepLink.params.contains("Command=PlayNow&ItemIds=541"))
         assertTrue(deepLink.params.contains("StartPositionTicks=36000000000"))
@@ -113,8 +120,7 @@ class EmbyRokuChannelPluginTest {
 
         val command = plugin.buildPlaybackCommand(content)
 
-        assertTrue(command is RokuPlaybackCommand.DeepLink)
-        val deepLink = command as RokuPlaybackCommand.DeepLink
+        val deepLink = launchOf(command)
         assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 
@@ -135,8 +141,7 @@ class EmbyRokuChannelPluginTest {
 
         val command = plugin.buildPlaybackCommand(content)
 
-        assertTrue(command is RokuPlaybackCommand.DeepLink)
-        val deepLink = command as RokuPlaybackCommand.DeepLink
+        val deepLink = launchOf(command)
         assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 
@@ -154,8 +159,7 @@ class EmbyRokuChannelPluginTest {
 
         val command = plugin.buildPlaybackCommand(content)
 
-        assertTrue(command is RokuPlaybackCommand.DeepLink)
-        val deepLink = command as RokuPlaybackCommand.DeepLink
+        val deepLink = launchOf(command)
         assertFalse(deepLink.params.contains("StartPositionTicks"))
     }
 

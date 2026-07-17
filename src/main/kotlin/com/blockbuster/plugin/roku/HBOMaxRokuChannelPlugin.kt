@@ -27,12 +27,4 @@ class HBOMaxRokuChannelPlugin : StreamingRokuChannelPlugin() {
     override fun getChannelName(): String = "HBO Max"
 
     override fun getPublicSearchDomain(): String = "hbomax.com"
-
-    override val urlPattern =
-        Regex(
-            """(?:max\.com|hbomax\.com)/""" +
-                """(?:(?:movies|series)/[^/]+/|(?:video/watch|play)/)([^/?]+)""",
-        )
-    override val defaultTitle = "HBO Max Content"
-    override val postLaunchKey = RokuKey.SELECT
 }
