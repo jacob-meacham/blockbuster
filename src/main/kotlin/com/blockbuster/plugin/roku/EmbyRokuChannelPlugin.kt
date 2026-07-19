@@ -42,8 +42,7 @@ class EmbyRokuChannelPlugin(
 
     // Playback (launch-only: Command=PlayNow&ItemIds=..., optional StartPositionTicks)
     // is handled by the generated RokuEcp core. Emby's own concern is library search.
-    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand =
-        RokuEcp.buildPlaybackCommand(content)
+    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand = RokuEcp.buildPlaybackCommand(content)
 
     override fun search(query: String): List<RokuMediaContent> {
         logger.debug("Searching Emby library for: {}", query)

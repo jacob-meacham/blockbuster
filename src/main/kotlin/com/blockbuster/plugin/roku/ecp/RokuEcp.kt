@@ -8,7 +8,7 @@ import com.blockbuster.plugin.roku.RokuPlaybackCommand
 /**
  * Roku ECP URL-to-playback core.
  *
- * GENERATED from the `roku-deeplink` spec-library (v1.1.0) via speclib. Implements
+ * GENERATED from the `roku-deeplink` spec-library (v1.3.0) via speclib. Implements
  * the spec's two functions and channel catalog:
  *
  *  - [convertUrlToEcpCommand] — the spec's URL extraction (URL channels only)
@@ -43,8 +43,7 @@ object RokuEcp {
             if (ticks != null && ticks > 0) append("&StartPositionTicks=$ticks")
         }
 
-    private fun launchThenPress(key: RokuKey): List<RokuAction> =
-        listOf(RokuAction.Wait(POST_LAUNCH_DELAY_MS), RokuAction.Press(key))
+    private fun launchThenPress(key: RokuKey): List<RokuAction> = listOf(RokuAction.Wait(POST_LAUNCH_DELAY_MS), RokuAction.Press(key))
 
     private val catalog: List<Channel> =
         listOf(
@@ -76,6 +75,26 @@ object RokuEcp {
                 id = "13",
                 name = "Prime Video",
                 urlPattern = Regex("""(?:amazon\.com|primevideo\.com)/.*?/([B][A-Z0-9]{9})"""),
+                determineMediaType = { DEFAULT_MEDIA_TYPE },
+                buildLaunchParams = ::contentIdParams,
+                postLaunchActions = launchThenPress(RokuKey.SELECT),
+            ),
+            Channel(
+                id = "2285",
+                name = "Hulu",
+                urlPattern =
+                    Regex(
+                        """hulu\.com/(?:series|watch|movie)/(?:[a-z0-9-]+-)?""" +
+                            """([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})""",
+                    ),
+                determineMediaType = { DEFAULT_MEDIA_TYPE },
+                buildLaunchParams = ::contentIdParams,
+                postLaunchActions = launchThenPress(RokuKey.SELECT),
+            ),
+            Channel(
+                id = "551012",
+                name = "Apple TV+",
+                urlPattern = Regex("""tv\.apple\.com/(?:\w{2}/)?(?:show|movie|episode)/[^/]+/(umc\.cmc\.[a-z0-9]+)"""),
                 determineMediaType = { DEFAULT_MEDIA_TYPE },
                 buildLaunchParams = ::contentIdParams,
                 postLaunchActions = launchThenPress(RokuKey.SELECT),

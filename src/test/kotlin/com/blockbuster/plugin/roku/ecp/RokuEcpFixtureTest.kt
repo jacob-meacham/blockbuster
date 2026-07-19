@@ -8,14 +8,13 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 
 /**
  * Validates the generated [RokuEcp] core against the roku-deeplink spec fixtures
- * (`test_fixtures.json`, copied from the spec-library at v1.1.0). This is the
+ * (`test_fixtures.json`, copied from the spec-library at v1.3.0). This is the
  * speclib trust gate: the generated code must satisfy every spec fixture.
  */
 class RokuEcpFixtureTest {
@@ -32,9 +31,8 @@ class RokuEcpFixtureTest {
             val url = case["url"].asText()
             DynamicTest.dynamicTest(url) {
                 val expected = case["expected"]
-                val got = RokuEcp.convertUrlToEcpCommand(url)
-                assertNotNull(got, "expected a match for $url")
-                assertEquals(expected["channel_id"].asText(), got!!.channelId)
+                val got = requireNotNull(RokuEcp.convertUrlToEcpCommand(url)) { "expected a match for $url" }
+                assertEquals(expected["channel_id"].asText(), got.channelId)
                 assertEquals(expected["channel_name"].asText(), got.channelName)
                 assertEquals(expected["content_id"].asText(), got.contentId)
                 assertEquals(expected["media_type"].asText(), got.mediaType)

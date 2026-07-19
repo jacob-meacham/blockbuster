@@ -13,8 +13,7 @@ import com.blockbuster.plugin.roku.ecp.RokuEcp
  * params, post-launch actions) lives in the generated core, not here.
  */
 abstract class StreamingRokuChannelPlugin : RokuChannelPlugin {
-    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand =
-        RokuEcp.buildPlaybackCommand(content)
+    override fun buildPlaybackCommand(content: RokuMediaContent): RokuPlaybackCommand = RokuEcp.buildPlaybackCommand(content)
 
     override fun search(query: String): List<RokuMediaContent> = emptyList()
 
