@@ -14,7 +14,7 @@ import org.junit.jupiter.api.TestFactory
 
 /**
  * Validates the generated [RokuEcp] core against the roku-deeplink spec fixtures
- * (`test_fixtures.json`, copied from the spec-library at v1.3.0). This is the
+ * (`test_fixtures.json`, copied from the spec-library at v1.4.0). This is the
  * speclib trust gate: the generated code must satisfy every spec fixture.
  */
 class RokuEcpFixtureTest {

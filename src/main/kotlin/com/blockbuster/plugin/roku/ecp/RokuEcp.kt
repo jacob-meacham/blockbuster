@@ -8,7 +8,7 @@ import com.blockbuster.plugin.roku.RokuPlaybackCommand
 /**
  * Roku ECP URL-to-playback core.
  *
- * GENERATED from the `roku-deeplink` spec-library (v1.3.0) via speclib. Implements
+ * GENERATED from the `roku-deeplink` spec-library (v1.4.0) via speclib. Implements
  * the spec's two functions and channel catalog:
  *
  *  - [convertUrlToEcpCommand] — the spec's URL extraction (URL channels only)
@@ -28,7 +28,7 @@ object RokuEcp {
         val id: String,
         val name: String,
         val urlPattern: Regex?,
-        val determineMediaType: (url: String) -> String?,
+        val determineMediaType: (matchedText: String) -> String?,
         val buildLaunchParams: (content: RokuMediaContent) -> String,
         val postLaunchActions: List<RokuAction>,
     )
@@ -50,8 +50,8 @@ object RokuEcp {
             Channel(
                 id = "12",
                 name = "Netflix",
-                urlPattern = Regex("""netflix\.com/(?:watch|title)/(\d+)"""),
-                determineMediaType = { url -> if (url.contains("/watch/")) "movie" else "series" },
+                urlPattern = Regex("""netflix\.com/(?:\w{2}(?:-\w{2})?/)?(?:watch|title)/(\d+)"""),
+                determineMediaType = { matched -> if (matched.contains("/watch/")) "movie" else "series" },
                 buildLaunchParams = ::contentIdParams,
                 postLaunchActions = launchThenPress(RokuKey.PLAY),
             ),
@@ -123,7 +123,7 @@ object RokuEcp {
                     channelId = channel.id,
                     contentId = match.groupValues[1],
                     title = "${channel.name} Content",
-                    mediaType = channel.determineMediaType(url),
+                    mediaType = channel.determineMediaType(match.value),
                 )
             }
         }

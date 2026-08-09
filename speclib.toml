@@ -1,7 +1,7 @@
 [project]
 [dependencies]
 [dependencies.roku-deeplink]
-source = '/code/jacob/roku-deeplink-spec'
-version = '*'
+source = 'git@github.com:jacob-meacham/roku-deeplink-spec.git'
+version = '^1.3.1'
 path = 'src/main/kotlin/com/blockbuster/plugin/roku/ecp'
 language = 'kotlin'
